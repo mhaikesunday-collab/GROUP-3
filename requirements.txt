@@ -1,2 +1,2 @@
 
-streamlit run blast_app.py
+streamlit app.py
