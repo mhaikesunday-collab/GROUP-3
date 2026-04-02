@@ -1,7 +1,7 @@
 """
 BLAST DESIGN & COST ESTIMATION TOOL
 Open-Pit Mining | Streamlit App
-Author: group 3
+Author: frank
 """
 
 import math
