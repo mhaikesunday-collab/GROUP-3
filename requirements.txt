@@ -1,1 +1,2 @@
 
+streamlit run blast_app.py
