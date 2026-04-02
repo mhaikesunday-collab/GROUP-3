@@ -8,6 +8,7 @@ import math
 import streamlit as st
 from datetime import datetime
 import pandas as pd
+from io import BytesIO
 
 # ─────────────────────────────────────────────────────────────
 #  PAGE CONFIG  – must be first Streamlit call
@@ -137,7 +138,7 @@ tr:last-child td {
     margin-top: 6px;
 }
 
-/* Download button */
+/* Download buttons */
 .stDownloadButton button {
     background: linear-gradient(135deg, var(--mid-blue), var(--mid-green)) !important;
     color: white !important;
@@ -235,6 +236,49 @@ Bench Area           : {inputs['area']:.1f} m²
 Unit Cost            : ${inputs['unit_cost']:.2f} /t
 """
 
+def generate_excel_report(inputs: dict, results: dict) -> BytesIO:
+    """Create an Excel file with multiple sheets and return as BytesIO."""
+    output = BytesIO()
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        # Sheet 1: Input Summary
+        input_df = pd.DataFrame([
+            ("Bench Height (m)", inputs['bench_height']),
+            ("Hole Diameter (m)", inputs['hole_diameter']),
+            ("Rock Density (t/m³)", inputs['rock_density']),
+            ("Explosive Density (t/m³)", inputs['explosive_density']),
+            ("Bench Area (m²)", inputs['area']),
+            ("Unit Cost ($/t)", inputs['unit_cost']),
+        ], columns=["Parameter", "Value"])
+        input_df.to_excel(writer, sheet_name="Input Summary", index=False)
+        
+        # Sheet 2: Drill Design
+        drill_df = pd.DataFrame([
+            ("Burden (m)", results['burden']),
+            ("Spacing (m)", results['spacing']),
+            ("Number of Holes", results['holes']),
+            ("Charge per Hole (t)", results['charge']),
+        ], columns=["Parameter", "Value"])
+        drill_df.to_excel(writer, sheet_name="Drill Design", index=False)
+        
+        # Sheet 3: Explosive & Rock
+        rock_df = pd.DataFrame([
+            ("Total Explosive (t)", results['total_exp']),
+            ("Rock Volume (m³)", results['rock_vol']),
+            ("Powder Factor (t/m³)", results['pf']),
+        ], columns=["Parameter", "Value"])
+        rock_df.to_excel(writer, sheet_name="Explosive & Rock", index=False)
+        
+        # Sheet 4: Cost Summary
+        cost_df = pd.DataFrame([
+            ("Total Blasting Cost ($)", results['cost']),
+            ("Explosive Unit Cost ($/t)", inputs['unit_cost']),
+            ("Total Explosive Used (t)", results['total_exp']),
+        ], columns=["Parameter", "Value"])
+        cost_df.to_excel(writer, sheet_name="Cost Summary", index=False)
+        
+    output.seek(0)
+    return output
+
 # ─────────────────────────────────────────────────────────────
 #  SIDEBAR
 # ─────────────────────────────────────────────────────────────
@@ -323,12 +367,24 @@ input_data = pd.DataFrame([
 st.table(input_data)
 
 # ─────────────────────────────────────────────────────────────
-#  DOWNLOAD REPORT
+#  DOWNLOAD BUTTONS (TXT + EXCEL)
 # ─────────────────────────────────────────────────────────────
-report_text = generate_report_text(inputs, results)
+col_btn1, col_btn2 = st.columns(2)
 
-st.download_button(
-    "📄 Download Report (TXT)",
-    report_text,
-    file_name=f"BlastDesign_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt",
-)
+with col_btn1:
+    report_text = generate_report_text(inputs, results)
+    st.download_button(
+        "📄 Download Report (TXT)",
+        report_text,
+        file_name=f"BlastDesign_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt",
+        mime="text/plain",
+    )
+
+with col_btn2:
+    excel_data = generate_excel_report(inputs, results)
+    st.download_button(
+        "📊 Download Report (Excel)",
+        excel_data,
+        file_name=f"BlastDesign_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
