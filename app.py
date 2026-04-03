@@ -335,12 +335,12 @@ if run_btn:
     else:
         st.session_state["results"] = results
         st.session_state["inputs_si"] = {
-            "Rock Density ": rock_density_tpm3,
-            "Bench Height ": bench_height_m,
-            "Hole Diameter ": hole_diameter_m,
-            "Explosive Density ": explosive_density_tpm3,
-            "Bench Area ": area_m2,
-            "Unit Cost ": unit_cost_dpt,
+            "Rock Density (t/m³)": rock_density_tpm3,
+            "Bench Height (m)": bench_height_m,
+            "Hole Diameter (m)": hole_diameter_m,
+            "Explosive Density (t/m³)": explosive_density_tpm3,
+            "Bench Area (m²)": area_m2,
+            "Unit Cost ($/t)": unit_cost_dpt,
         }
 
 # Display results if available
