@@ -18,12 +18,12 @@ st.set_page_config(
 )
 
 # ─────────────────────────────
-# LOGO + MOTTO
+# LOGO + MOTTO (fixed, no external file)
 # ─────────────────────────────
 col1, col2 = st.columns([1, 3])
 
 with col1:
-    st.image("logo.png", width=120)  # Put your logo file in folder
+    st.markdown("## 💥")   # emoji as placeholder logo
 
 with col2:
     st.markdown("## 💥 Blast Design & Cost Tool")
@@ -32,33 +32,47 @@ with col2:
 st.markdown("---")
 
 # ─────────────────────────────
-# UNIT CONVERSION (CORRECTED)
+# UNIT CONVERSION (corrected & safe)
 # ─────────────────────────────
 def convert_length(value, unit):
-    return {
-        "m": value,
-        "cm": value / 100,
-        "mm": value / 1000
-    }[unit]
+    unit = unit.lower()
+    if unit == "m":
+        return value
+    elif unit == "cm":
+        return value / 100
+    elif unit == "mm":
+        return value / 1000
+    else:
+        return value  # fallback
 
 def convert_area(value, unit):
-    return {
-        "m²": value,
-        "cm²": value / 10000,
-        "ha": value * 10000
-    }[unit]
+    unit = unit.lower()
+    if unit == "m²" or unit == "m2":
+        return value
+    elif unit == "cm²" or unit == "cm2":
+        return value / 10000
+    elif unit == "ha":
+        return value * 10000
+    else:
+        return value
 
 def convert_density(value, unit):
-    return {
-        "t/m³": value,
-        "kg/m³": value / 1000
-    }[unit]
+    unit = unit.lower()
+    if unit == "t/m³" or unit == "t/m3":
+        return value
+    elif unit == "kg/m³" or unit == "kg/m3":
+        return value / 1000
+    else:
+        return value
 
 def convert_cost(value, unit):
-    return {
-        "$/t": value,
-        "$/kg": value * 1000
-    }[unit]
+    unit = unit.lower()
+    if unit == "$/t" or unit == "$/tonne":
+        return value
+    elif unit == "$/kg":
+        return value * 1000
+    else:
+        return value
 
 # ─────────────────────────────
 # SIDEBAR INPUTS
@@ -90,43 +104,42 @@ with st.sidebar:
 # CALCULATIONS
 # ─────────────────────────────
 def run_calc():
-
-    # Convert everything to SI units FIRST
+    # Convert everything to SI units
     inputs = {
-        "rock_density": convert_density(rock_density_val, rock_density_unit),
-        "height": convert_length(bench_height_val, bench_height_unit),
-        "diameter": convert_length(hole_diameter_val, hole_diameter_unit),
-        "explosive_density": convert_density(explosive_density_val, explosive_density_unit),
-        "unit_cost": convert_cost(unit_cost_val, unit_cost_unit),
-        "area": convert_area(area_val, area_unit),
+        "Rock Density (t/m³)": convert_density(rock_density_val, rock_density_unit),
+        "Bench Height (m)": convert_length(bench_height_val, bench_height_unit),
+        "Hole Diameter (m)": convert_length(hole_diameter_val, hole_diameter_unit),
+        "Explosive Density (t/m³)": convert_density(explosive_density_val, explosive_density_unit),
+        "Unit Cost ($/t)": convert_cost(unit_cost_val, unit_cost_unit),
+        "Bench Area (m²)": convert_area(area_val, area_unit),
     }
 
     # Core formulas
-    burden = 25 * inputs["diameter"] * (1 / inputs["rock_density"])
+    burden = 25 * inputs["Hole Diameter (m)"] * (1 / inputs["Rock Density (t/m³)"])
     spacing = 1.25 * burden
 
-    holes = max(1, int(inputs["area"] / (burden * spacing)))
+    holes = max(1, int(inputs["Bench Area (m²)"] / (burden * spacing)))
 
-    radius = inputs["diameter"] / 2
-    volume = math.pi * (radius ** 2) * inputs["height"]
+    radius = inputs["Hole Diameter (m)"] / 2
+    volume = math.pi * (radius ** 2) * inputs["Bench Height (m)"]
 
-    charge_per_hole = volume * inputs["explosive_density"]
+    charge_per_hole = volume * inputs["Explosive Density (t/m³)"]
     total_exp = charge_per_hole * holes
 
-    rock_volume = inputs["area"] * inputs["height"]
+    rock_volume = inputs["Bench Area (m²)"] * inputs["Bench Height (m)"]
     powder_factor = total_exp / rock_volume
 
-    cost = total_exp * inputs["unit_cost"]
+    cost = total_exp * inputs["Unit Cost ($/t)"]
 
     results = {
-        "burden": burden,
-        "spacing": spacing,
-        "holes": holes,
-        "charge": charge_per_hole,
-        "total_exp": total_exp,
-        "rock_volume": rock_volume,
-        "pf": powder_factor,
-        "cost": cost,
+        "Burden (m)": burden,
+        "Spacing (m)": spacing,
+        "Number of Holes": holes,
+        "Charge per Hole (t)": charge_per_hole,
+        "Total Explosive (t)": total_exp,
+        "Rock Volume (m³)": rock_volume,
+        "Powder Factor (t/m³)": powder_factor,
+        "Total Cost ($)": cost,
     }
 
     return inputs, results
@@ -147,52 +160,44 @@ if "results" in st.session_state:
     colA, colB = st.columns(2)
 
     with colA:
-        st.subheader("📥 Inputs")
-        st.table(pd.DataFrame({
+        st.subheader("📥 Inputs (converted to SI)")
+        # Convert inputs dict to DataFrame for clean display
+        input_df = pd.DataFrame({
             "Parameter": list(inputs.keys()),
-            "Value": list(inputs.values())
-        }))
+            "Value": [f"{v:.4f}" if isinstance(v, float) else v for v in inputs.values()]
+        })
+        st.table(input_df)
 
     with colB:
         st.subheader("📊 Results")
-        st.table(pd.DataFrame({
-            "Parameter": [
-                "Burden", "Spacing", "Holes",
-                "Charge per Hole", "Total Explosive",
-                "Rock Volume", "Powder Factor", "Cost"
-            ],
-            "Value": [
-                results["burden"],
-                results["spacing"],
-                results["holes"],
-                results["charge"],
-                results["total_exp"],
-                results["rock_volume"],
-                results["pf"],
-                results["cost"]
-            ]
-        }))
+        result_df = pd.DataFrame({
+            "Parameter": list(results.keys()),
+            "Value": [f"{v:.4f}" if isinstance(v, float) else v for v in results.values()]
+        })
+        st.table(result_df)
 
     # COST DISPLAY
     st.markdown("---")
     st.markdown(f"""
     ### 💰 Total Cost
 
-    **${results['cost']:,.2f}**
+    **${results['Total Cost ($)']:,.2f}**
     """)
 
-    # TXT DOWNLOAD ONLY
+    # TXT DOWNLOAD
     def report():
         return f"""
 BLAST REPORT
 {datetime.now()}
 
-Burden: {results['burden']:.3f}
-Spacing: {results['spacing']:.3f}
-Holes: {results['holes']}
-Charge: {results['charge']:.4f}
-Total Explosive: {results['total_exp']:.3f}
-Cost: ${results['cost']:,.2f}
+Burden: {results['Burden (m)']:.3f} m
+Spacing: {results['Spacing (m)']:.3f} m
+Holes: {results['Number of Holes']}
+Charge per Hole: {results['Charge per Hole (t)']:.4f} t
+Total Explosive: {results['Total Explosive (t)']:.3f} t
+Rock Volume: {results['Rock Volume (m³)']:.2f} m³
+Powder Factor: {results['Powder Factor (t/m³)']:.4f}
+Total Cost: ${results['Total Cost ($)']:,.2f}
 """
 
     st.download_button(
@@ -200,3 +205,7 @@ Cost: ${results['cost']:,.2f}
         report(),
         file_name="blast_report.txt"
     )
+
+else:
+    # Show a friendly message before first calculation
+    st.info("👈 Enter your parameters in the sidebar and click **CALCULATE** to see results.")
