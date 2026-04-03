@@ -33,7 +33,7 @@ def get_base64_image(image_path):
         return None
 
 # ─────────────────────────────────────────────────────────────
-#  FULL-WIDTH LOGO WITH COMPACT MOTTO (single line at bottom)
+#  FULL-WIDTH LOGO WITH COMPACT MOTTO
 # ─────────────────────────────────────────────────────────────
 logo_b64 = get_base64_image("logo.png")
 if logo_b64:
@@ -76,14 +76,13 @@ if logo_b64:
     </div>
     """, unsafe_allow_html=True)
 else:
-    # Fallback if logo not found
     st.markdown('<div class="motto" style="margin-top:0;">💥 BLAST LIKE A PRO, SAVE LIKE A BOSS 💥</div>', unsafe_allow_html=True)
 
 st.title("Blast Design & Cost Estimation Tool")
 st.caption("Open‑Pit Mining | Drill & Blast Engineering")
 
 # ─────────────────────────────────────────────────────────────
-#  GLOBAL CSS – dark theme + table styling (rest)
+#  GLOBAL CSS – dark theme + table styling
 # ─────────────────────────────────────────────────────────────
 st.markdown("""
 <style>
@@ -231,9 +230,18 @@ def cost_to_dollar_per_tonne(value, unit):
 
 # ─────────────────────────────────────────────────────────────
 #  CALCULATION ENGINE (SI: m, m², t/m³, $/t)
+#  Returns None if any required input is zero or negative
 # ─────────────────────────────────────────────────────────────
 def run_design(bench_height_m, hole_diameter_m, rock_density_tpm3,
                explosive_density_tpm3, unit_cost_dpt, area_m2):
+    # Prevent division by zero or invalid dimensions
+    if rock_density_tpm3 <= 0:
+        return None
+    if bench_height_m <= 0 or hole_diameter_m <= 0 or area_m2 <= 0:
+        return None
+    if explosive_density_tpm3 <= 0:
+        return None
+    
     burden = 25 * hole_diameter_m * (1 / rock_density_tpm3)
     spacing = 1.25 * burden
     holes = max(1, int(area_m2 / (burden * spacing)))
@@ -256,7 +264,7 @@ def run_design(bench_height_m, hole_diameter_m, rock_density_tpm3,
     }
 
 # ─────────────────────────────────────────────────────────────
-#  SIDEBAR – INPUTS WITH INLINE UNITS
+#  SIDEBAR – INPUTS WITH INLINE UNITS (all start at 0)
 # ─────────────────────────────────────────────────────────────
 with st.sidebar:
     st.markdown("### ⚙️ INPUT PARAMETERS")
@@ -264,42 +272,42 @@ with st.sidebar:
     # Rock Density
     col1, col2 = st.columns([2, 1])
     with col1:
-        rd_val = st.number_input("Rock Density", value=2.7, step=0.1, format="%.2f", key="rd")
+        rd_val = st.number_input("Rock Density", min_value=0.0, value=0.0, step=0.1, format="%.2f", key="rd")
     with col2:
         rd_unit = st.selectbox("Unit", ["t/m³", "kg/m³", "g/cm³", "lb/ft³"], index=0, key="rd_u")
     
     # Bench Height
     col1, col2 = st.columns([2, 1])
     with col1:
-        bh_val = st.number_input("Bench Height", value=10.0, step=0.5, format="%.2f", key="bh")
+        bh_val = st.number_input("Bench Height", min_value=0.0, value=0.0, step=0.5, format="%.2f", key="bh")
     with col2:
         bh_unit = st.selectbox("Unit", ["m", "cm", "mm", "ft", "inch"], index=0, key="bh_u")
     
     # Hole Diameter
     col1, col2 = st.columns([2, 1])
     with col1:
-        hd_val = st.number_input("Hole Diameter", value=0.115, step=0.005, format="%.4f", key="hd")
+        hd_val = st.number_input("Hole Diameter", min_value=0.0, value=0.0, step=0.005, format="%.4f", key="hd")
     with col2:
         hd_unit = st.selectbox("Unit", ["m", "cm", "mm", "ft", "inch"], index=0, key="hd_u")
     
     # Explosive Density
     col1, col2 = st.columns([2, 1])
     with col1:
-        ed_val = st.number_input("Explosive Density", value=0.85, step=0.05, format="%.2f", key="ed")
+        ed_val = st.number_input("Explosive Density", min_value=0.0, value=0.0, step=0.05, format="%.2f", key="ed")
     with col2:
         ed_unit = st.selectbox("Unit", ["t/m³", "kg/m³", "g/cm³", "lb/ft³"], index=0, key="ed_u")
     
     # Bench Area
     col1, col2 = st.columns([2, 1])
     with col1:
-        area_val = st.number_input("Bench Area", value=5000.0, step=100.0, format="%.1f", key="area")
+        area_val = st.number_input("Bench Area", min_value=0.0, value=0.0, step=100.0, format="%.1f", key="area")
     with col2:
         area_unit = st.selectbox("Unit", ["m²", "cm²", "ha", "ft²", "ac"], index=0, key="area_u")
     
     # Unit Cost
     col1, col2 = st.columns([2, 1])
     with col1:
-        cost_val = st.number_input("Unit Cost", value=450.0, step=10.0, format="%.2f", key="cost")
+        cost_val = st.number_input("Unit Cost", min_value=0.0, value=0.0, step=10.0, format="%.2f", key="cost")
     with col2:
         cost_unit = st.selectbox("Unit", ["$/t", "$/kg"], index=0, key="cost_u")
     
@@ -320,31 +328,35 @@ if run_btn:
     results = run_design(bench_height_m, hole_diameter_m, rock_density_tpm3,
                          explosive_density_tpm3, unit_cost_dpt, area_m2)
     
-    # Store in session state
-    st.session_state["results"] = results
-    st.session_state["inputs_si"] = {
-        "Rock Density (t/m³)": rock_density_tpm3,
-        "Bench Height (m)": bench_height_m,
-        "Hole Diameter (m)": hole_diameter_m,
-        "Explosive Density (t/m³)": explosive_density_tpm3,
-        "Bench Area (m²)": area_m2,
-        "Unit Cost ($/t)": unit_cost_dpt,
-    }
+    if results is None:
+        st.error("❌ Please enter positive values for all inputs (Rock Density, Bench Height, Hole Diameter, Explosive Density, Bench Area).")
+        st.session_state.pop("results", None)
+        st.session_state.pop("inputs_si", None)
+    else:
+        st.session_state["results"] = results
+        st.session_state["inputs_si"] = {
+            "Rock Density (t/m³)": rock_density_tpm3,
+            "Bench Height (m)": bench_height_m,
+            "Hole Diameter (m)": hole_diameter_m,
+            "Explosive Density (t/m³)": explosive_density_tpm3,
+            "Bench Area (m²)": area_m2,
+            "Unit Cost ($/t)": unit_cost_dpt,
+        }
 
 # Display results if available
 if "results" in st.session_state:
     res = st.session_state["results"]
     ins = st.session_state["inputs_si"]
     
-    # Vertical stack: Inputs → Results → Cost → Download
-    st.subheader("📥 INPUTS")   # Changed to capitals and removed "(converted to SI)"
+    # Vertical stack: INPUTS → RESULTS → Cost → Download
+    st.subheader("📥 INPUTS")
     input_df = pd.DataFrame({
         "Parameter": list(ins.keys()),
         "Value": [f"{v:.4f}" if isinstance(v, float) else v for v in ins.values()]
     })
     st.table(input_df)
     
-    st.subheader("📊 RESULTS")   # Changed to capitals
+    st.subheader("📊 RESULTS")
     result_items = [
         ("Burden (m)", res["burden_m"]),
         ("Spacing (m)", res["spacing_m"]),
@@ -371,13 +383,13 @@ if "results" in st.session_state:
     </div>
     """, unsafe_allow_html=True)
     
-    # Download TXT report only
+    # Download TXT report
     def txt_report():
         return f"""
 BLAST DESIGN REPORT
 {datetime.now().strftime("%d %B %Y %H:%M:%S")}
 
-=== INPUTS (SI) ===
+=== INPUTS ===
 {chr(10).join([f"{k}: {v:.4f}" if isinstance(v, float) else f"{k}: {v}" for k, v in ins.items()])}
 
 === RESULTS ===
@@ -398,7 +410,9 @@ Total Cost           : ${res['cost_usd']:,.2f}
         file_name=f"BlastDesign_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
     )
 else:
-    st.info("👈 Enter your parameters in the sidebar and click **CALCULATE** to see results.")
+    # Show a message only if no calculation has been performed yet (not after an error)
+    if not run_btn:
+        st.info("👈 Enter your parameters in the sidebar and click **CALCULATE** to see results.")
 
 # ─────────────────────────────────────────────────────────────
 #  OPTIONAL UNIT CONVERTER (expandable)
