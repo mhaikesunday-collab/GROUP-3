@@ -337,14 +337,14 @@ if "results" in st.session_state:
     ins = st.session_state["inputs_si"]
     
     # Vertical stack: Inputs → Results → Cost → Download
-    st.subheader("📥 Inputs (converted to SI)")
+    st.subheader("📥 INPUTS")   # Changed to capitals and removed "(converted to SI)"
     input_df = pd.DataFrame({
         "Parameter": list(ins.keys()),
         "Value": [f"{v:.4f}" if isinstance(v, float) else v for v in ins.values()]
     })
     st.table(input_df)
     
-    st.subheader("📊 Results")
+    st.subheader("📊 RESULTS")   # Changed to capitals
     result_items = [
         ("Burden (m)", res["burden_m"]),
         ("Spacing (m)", res["spacing_m"]),
