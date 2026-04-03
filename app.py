@@ -22,7 +22,7 @@ st.set_page_config(
 )
 
 # ─────────────────────────────────────────────────────────────
-#  FUNCTION TO GET BASE64 OF LOCAL IMAGE (for inline CSS background)
+#  FUNCTION TO GET BASE64 OF LOCAL IMAGE
 # ─────────────────────────────────────────────────────────────
 def get_base64_image(image_path):
     try:
@@ -33,7 +33,7 @@ def get_base64_image(image_path):
         return None
 
 # ─────────────────────────────────────────────────────────────
-#  FULL-WIDTH LOGO WITH OVERLAID MOTTO (compact at bottom)
+#  FULL-WIDTH LOGO WITH COMPACT MOTTO (single line at bottom)
 # ─────────────────────────────────────────────────────────────
 logo_b64 = get_base64_image("logo.png")
 if logo_b64:
@@ -43,7 +43,7 @@ if logo_b64:
         background-image: url("data:image/png;base64,{logo_b64}");
         background-size: cover;
         background-position: center;
-        height: 200px;
+        height: 150px;
         width: 100%;
         border-radius: 12px;
         margin-bottom: 20px;
@@ -55,17 +55,20 @@ if logo_b64:
     }}
     .hero-logo .motto-overlay {{
         font-family: 'Share Tech Mono', monospace;
-        font-size: 18px;
+        font-size: 14px;
         font-weight: bold;
-        letter-spacing: 2px;
+        letter-spacing: 1px;
         color: #0FBF6A;
-        text-shadow: 0 0 6px black;
-        background: rgba(4, 16, 28, 0.75);
-        padding: 8px 20px;
-        border-radius: 30px;
+        text-shadow: 0 0 4px black;
+        background: rgba(4, 16, 28, 0.8);
+        padding: 4px 12px;
+        border-radius: 20px;
         text-align: center;
-        backdrop-filter: blur(3px);
-        margin-bottom: 15px;
+        backdrop-filter: blur(2px);
+        margin-bottom: 8px;
+        white-space: nowrap;
+        max-width: 95%;
+        overflow-x: auto;
     }}
     </style>
     <div class="hero-logo">
