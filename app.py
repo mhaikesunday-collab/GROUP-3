@@ -9,6 +9,7 @@ import streamlit as st
 from datetime import datetime
 import pandas as pd
 import os
+import base64
 
 # ─────────────────────────────────────────────────────────────
 #  PAGE CONFIG
@@ -21,7 +22,64 @@ st.set_page_config(
 )
 
 # ─────────────────────────────────────────────────────────────
-#  GLOBAL CSS – dark theme + table styling
+#  FUNCTION TO GET BASE64 OF LOCAL IMAGE (for inline CSS background)
+# ─────────────────────────────────────────────────────────────
+def get_base64_image(image_path):
+    try:
+        with open(image_path, "rb") as f:
+            data = f.read()
+        return base64.b64encode(data).decode()
+    except:
+        return None
+
+# ─────────────────────────────────────────────────────────────
+#  FULL-WIDTH LOGO WITH OVERLAID MOTTO
+# ─────────────────────────────────────────────────────────────
+logo_b64 = get_base64_image("logo.png")
+if logo_b64:
+    st.markdown(f"""
+    <style>
+    .hero-logo {{
+        background-image: url("data:image/png;base64,{logo_b64}");
+        background-size: cover;
+        background-position: center;
+        height: 200px;
+        width: 100%;
+        border-radius: 12px;
+        margin-bottom: 20px;
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }}
+    .hero-logo .motto-overlay {{
+        font-family: 'Share Tech Mono', monospace;
+        font-size: 32px;
+        font-weight: bold;
+        letter-spacing: 4px;
+        color: #0FBF6A;
+        text-shadow: 0 0 10px #04101C, 2px 2px 4px black;
+        background: rgba(4, 16, 28, 0.7);
+        padding: 15px 30px;
+        border-radius: 50px;
+        text-align: center;
+        backdrop-filter: blur(4px);
+    }}
+    </style>
+    <div class="hero-logo">
+        <div class="motto-overlay">💥 BLAST LIKE A PRO, SAVE LIKE A BOSS 💥</div>
+    </div>
+    """, unsafe_allow_html=True)
+else:
+    # Fallback if logo not found
+    st.markdown('<div class="motto" style="margin-top:0;">💥 BLAST LIKE A PRO, SAVE LIKE A BOSS 💥</div>', unsafe_allow_html=True)
+
+st.title("Blast Design & Cost Estimation Tool")
+st.caption("Open‑Pit Mining | Drill & Blast Engineering")
+
+# ─────────────────────────────────────────────────────────────
+#  GLOBAL CSS – dark theme + table styling (rest)
 # ─────────────────────────────────────────────────────────────
 st.markdown("""
 <style>
@@ -56,32 +114,6 @@ html, body, [data-testid="stAppViewContainer"] {
 
 #MainMenu, footer, header { visibility: hidden; }
 [data-testid="stDecoration"] { display: none; }
-
-/* Logo container */
-.logo-container {
-    text-align: center;
-    margin-bottom: 10px;
-}
-.logo-img {
-    max-width: 200px;
-    border-radius: 8px;
-}
-
-/* Motto styling */
-.motto {
-    text-align: center;
-    font-family: var(--mono);
-    font-size: 28px;
-    font-weight: bold;
-    letter-spacing: 4px;
-    color: var(--accent-green);
-    text-shadow: 0 0 8px rgba(15,191,106,0.4);
-    margin: 20px 0 30px 0;
-    padding: 15px;
-    border-top: 1px solid var(--border);
-    border-bottom: 1px solid var(--border);
-    background: rgba(4,16,28,0.6);
-}
 
 /* Headers */
 h1, h2, h3, h4, h5, h6, .stMarkdown h1, .stMarkdown h2, .stMarkdown h3 {
@@ -165,26 +197,6 @@ td {
 }
 </style>
 """, unsafe_allow_html=True)
-
-# ─────────────────────────────────────────────────────────────
-#  LOGO (local file "logo.png") – with error handling
-# ─────────────────────────────────────────────────────────────
-if os.path.exists("logo.png"):
-    try:
-        st.image("logo.png", width=150, use_container_width=False)
-    except Exception as e:
-        st.warning(f"Could not load logo: {e}")
-        st.markdown('<div class="logo-container">💥 <strong>BLAST DESIGN</strong> 💥</div>', unsafe_allow_html=True)
-else:
-    st.markdown('<div class="logo-container">💥 <strong>BLAST DESIGN</strong> 💥</div>', unsafe_allow_html=True)
-
-# ─────────────────────────────────────────────────────────────
-#  MOTTO
-# ─────────────────────────────────────────────────────────────
-st.markdown('<div class="motto">💥 BLAST LIKE A PRO, SAVE LIKE A BOSS 💥</div>', unsafe_allow_html=True)
-
-st.title("Blast Design & Cost Estimation Tool")
-st.caption("Open‑Pit Mining | Drill & Blast Engineering")
 
 # ─────────────────────────────────────────────────────────────
 #  UNIT CONVERSION FUNCTIONS
