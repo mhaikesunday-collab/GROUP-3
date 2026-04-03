@@ -56,6 +56,16 @@ html, body, [data-testid="stAppViewContainer"] {
 #MainMenu, footer, header { visibility: hidden; }
 [data-testid="stDecoration"] { display: none; }
 
+/* Logo container */
+.logo-container {
+    text-align: center;
+    margin-bottom: 10px;
+}
+.logo-img {
+    max-width: 200px;
+    border-radius: 8px;
+}
+
 /* Motto styling */
 .motto {
     text-align: center;
@@ -154,6 +164,23 @@ td {
 }
 </style>
 """, unsafe_allow_html=True)
+
+# ─────────────────────────────────────────────────────────────
+#  LOGO (local file "logo.png")
+# ─────────────────────────────────────────────────────────────
+try:
+    st.image("logo.png", width=150, use_container_width=False)
+except FileNotFoundError:
+    st.warning("Logo file 'logo.png' not found. Please add it to the same folder.")
+    st.markdown('<div class="logo-container">💥 <strong>BLAST DESIGN</strong> 💥</div>', unsafe_allow_html=True)
+
+# ─────────────────────────────────────────────────────────────
+#  MOTTO
+# ─────────────────────────────────────────────────────────────
+st.markdown('<div class="motto">💥 BLAST LIKE A PRO, SAVE LIKE A BOSS 💥</div>', unsafe_allow_html=True)
+
+st.title("Blast Design & Cost Estimation Tool")
+st.caption("Open‑Pit Mining | Drill & Blast Engineering")
 
 # ─────────────────────────────────────────────────────────────
 #  UNIT CONVERSION FUNCTIONS
@@ -259,14 +286,6 @@ with st.sidebar:
     run_btn = st.button("CALCULATE", use_container_width=True)
 
 # ─────────────────────────────────────────────────────────────
-#  MAIN APP – MOTTO + TITLE
-# ─────────────────────────────────────────────────────────────
-st.markdown('<div class="motto">💥 BLAST LIKE A PRO, SAVE LIKE A BOSS 💥</div>', unsafe_allow_html=True)
-
-st.title("Blast Design & Cost Estimation Tool")
-st.caption("Open‑Pit Mining | Drill & Blast Engineering")
-
-# ─────────────────────────────────────────────────────────────
 #  PROCESS CALCULATION
 # ─────────────────────────────────────────────────────────────
 if run_btn:
@@ -297,7 +316,7 @@ if "results" in st.session_state:
     res = st.session_state["results"]
     ins = st.session_state["inputs_si"]
     
-    # Single vertical stack: Inputs → Results → Cost → Download
+    # Vertical stack: Inputs → Results → Cost → Download
     st.subheader("📥 Inputs (converted to SI)")
     input_df = pd.DataFrame({
         "Parameter": list(ins.keys()),
