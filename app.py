@@ -2,14 +2,12 @@
 BLAST DESIGN & COST ESTIMATION TOOL
 Open-Pit Mining | Streamlit App
 Author: mhaike
-Flexible unit inputs & outputs
 """
 
 import math
 import streamlit as st
 from datetime import datetime
 import pandas as pd
-from io import BytesIO
 
 # ─────────────────────────────────────────────────────────────
 # PAGE CONFIG
@@ -22,68 +20,45 @@ st.set_page_config(
 )
 
 # ─────────────────────────────────────────────────────────────
-# UNIT CONVERSION FUNCTIONS
-# ─────────────────────────────────────────────────────────────
-def length_to_m(value, unit):
-    to_m = {"mm": 0.001, "cm": 0.01, "m": 1.0, "km": 1000.0, "inch": 0.0254, "ft": 0.3048, "yd": 0.9144}
-    return value * to_m[unit]
-
-def m_to_length(value, unit):
-    from_m = {"mm": 1000, "cm": 100, "m": 1, "km": 0.001, "inch": 39.3701, "ft": 3.28084, "yd": 1.09361}
-    return value * from_m[unit]
-
-def area_to_m2(value, unit):
-    to_m2 = {"m²": 1.0, "km²": 1e6, "ha": 10000.0, "ft²": 0.092903, "ac": 4046.86}
-    return value * to_m2[unit]
-
-def m2_to_area(value, unit):
-    from_m2 = {"m²": 1, "km²": 1e-6, "ha": 0.0001, "ft²": 10.7639, "ac": 0.000247105}
-    return value * from_m2[unit]
-
-def density_to_kgpm3(value, unit):
-    to_kgm3 = {"kg/m³": 1.0, "g/cm³": 1000.0, "t/m³": 1000.0, "lb/ft³": 16.0185}
-    return value * to_kgm3[unit]
-
-def kgpm3_to_density(value, unit):
-    from_kgm3 = {"kg/m³": 1, "g/cm³": 0.001, "t/m³": 0.001, "lb/ft³": 0.062428}
-    return value * from_kgm3[unit]
-
-# ─────────────────────────────────────────────────────────────
 # CALCULATIONS
 # ─────────────────────────────────────────────────────────────
-def run_design(bench_height_m, hole_diameter_m, rock_density_kgpm3,
-               explosive_density_kgpm3, unit_cost_per_tonne, area_m2):
+def calc_burden(diameter: float, rock_density: float) -> float:
+    return 25 * diameter * (1 / rock_density)
 
-    burden_m = 25 * hole_diameter_m * (1000.0 / rock_density_kgpm3)
-    spacing_m = 1.25 * burden_m
-    holes = max(1, int(area_m2 / (burden_m * spacing_m)))
+def calc_spacing(burden: float) -> float:
+    return 1.25 * burden
 
-    radius = hole_diameter_m / 2.0
-    volume = math.pi * radius**2 * bench_height_m
-    charge_tonnes = (volume * explosive_density_kgpm3) / 1000.0
+def calc_holes(area: float, burden: float, spacing: float) -> int:
+    return max(1, int(area / (burden * spacing)))
 
-    total_exp = charge_tonnes * holes
-    rock_vol = area_m2 * bench_height_m
-    pf = total_exp / rock_vol
-    cost = total_exp * unit_cost_per_tonne
+def calc_charge_per_hole(diameter: float, bench_height: float, explosive_density: float) -> float:
+    radius = diameter / 2
+    volume = math.pi * (radius ** 2) * bench_height
+    return volume * explosive_density
+
+def run_design(bench_height, hole_diameter, rock_density,
+               explosive_density, unit_cost, area):
+
+    burden    = calc_burden(hole_diameter, rock_density)
+    spacing   = calc_spacing(burden)
+    holes     = calc_holes(area, burden, spacing)
+    charge    = calc_charge_per_hole(hole_diameter, bench_height, explosive_density)
+
+    total_exp = charge * holes
+    rock_vol  = area * bench_height
+    pf        = total_exp / rock_vol
+    cost      = total_exp * unit_cost
 
     return dict(
-        burden_m=burden_m,
-        spacing_m=spacing_m,
+        burden=burden,
+        spacing=spacing,
         holes=holes,
-        charge_tonnes=charge_tonnes,
-        total_exp_tonnes=total_exp,
-        rock_vol_m3=rock_vol,
+        charge=charge,
+        total_exp=total_exp,
+        rock_vol=rock_vol,
         pf=pf,
         cost=cost
     )
-
-# ─────────────────────────────────────────────────────────────
-# SESSION STATE INIT
-# ─────────────────────────────────────────────────────────────
-if "results_si" not in st.session_state:
-    st.session_state["results_si"] = None
-    st.session_state["inputs_si"] = None
 
 # ─────────────────────────────────────────────────────────────
 # SIDEBAR INPUTS
@@ -91,99 +66,131 @@ if "results_si" not in st.session_state:
 with st.sidebar:
     st.header("Inputs")
 
-    bh = length_to_m(st.number_input("Bench Height", 10.0), "m")
-    hd = length_to_m(st.number_input("Hole Diameter", 0.115), "m")
-    rd = density_to_kgpm3(st.number_input("Rock Density", 2.7), "t/m³")
-    ed = density_to_kgpm3(st.number_input("Explosive Density", 0.85), "t/m³")
-    area = area_to_m2(st.number_input("Bench Area", 5000.0), "m²")
-    cost = st.number_input("Unit Cost ($/t)", 450.0)
+    rock_density      = st.number_input("Rock Density (t/m³)", 2.7)
+    bench_height      = st.number_input("Bench Height (m)", 10.0)
+    area              = st.number_input("Bench Area (m²)", 5000.0)
+    hole_diameter     = st.number_input("Hole Diameter (m)", 0.115)
+    explosive_density = st.number_input("Explosive Density (t/m³)", 0.85)
+    unit_cost         = st.number_input("Unit Cost ($/t)", 450.0)
 
     run_btn = st.button("CALCULATE")
 
 # ─────────────────────────────────────────────────────────────
 # RUN CALCULATION
 # ─────────────────────────────────────────────────────────────
-if run_btn:
+if run_btn or "results" not in st.session_state:
     inputs = dict(
-        bench_height_m=bh,
-        hole_diameter_m=hd,
-        rock_density_kgpm3=rd,
-        explosive_density_kgpm3=ed,
-        unit_cost_per_tonne=cost,
-        area_m2=area,
+        bench_height=bench_height,
+        hole_diameter=hole_diameter,
+        rock_density=rock_density,
+        explosive_density=explosive_density,
+        unit_cost=unit_cost,
+        area=area,
     )
+    results = run_design(**inputs)
 
-    st.session_state["inputs_si"] = inputs
-    st.session_state["results_si"] = run_design(**inputs)
+    st.session_state["inputs"] = inputs
+    st.session_state["results"] = results
 
-# ─────────────────────────────────────────────────────────────
-# SAFETY CHECK
-# ─────────────────────────────────────────────────────────────
-if st.session_state["results_si"] is None:
-    st.warning("Click CALCULATE before downloading or viewing results.")
-    st.stop()
-
-results_si = st.session_state["results_si"]
-inputs_si = st.session_state["inputs_si"]
-
-# ─────────────────────────────────────────────────────────────
-# EXCEL EXPORT (FIXED + SAFE)
-# ─────────────────────────────────────────────────────────────
-def generate_excel_report():
-    output = BytesIO()
-
-    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-
-        df_inputs = pd.DataFrame([
-            ("Bench Height (m)", inputs_si['bench_height_m']),
-            ("Hole Diameter (m)", inputs_si['hole_diameter_m']),
-            ("Rock Density", inputs_si['rock_density_kgpm3']),
-            ("Explosive Density", inputs_si['explosive_density_kgpm3']),
-            ("Area (m²)", inputs_si['area_m2']),
-            ("Unit Cost", inputs_si['unit_cost_per_tonne']),
-        ], columns=["Parameter", "Value"])
-
-        df_results = pd.DataFrame([
-            ("Burden (m)", results_si['burden_m']),
-            ("Spacing (m)", results_si['spacing_m']),
-            ("Holes", results_si['holes']),
-            ("Charge (t)", results_si['charge_tonnes']),
-            ("Total Explosive (t)", results_si['total_exp_tonnes']),
-            ("Rock Volume (m³)", results_si['rock_vol_m3']),
-            ("Powder Factor", results_si['pf']),
-            ("Cost ($)", results_si['cost']),
-        ], columns=["Parameter", "Value"])
-
-        df_inputs.to_excel(writer, sheet_name="Inputs", index=False)
-        df_results.to_excel(writer, sheet_name="Results", index=False)
-
-    output.seek(0)
-    return output
+inputs = st.session_state["inputs"]
+results = st.session_state["results"]
 
 # ─────────────────────────────────────────────────────────────
 # DISPLAY
 # ─────────────────────────────────────────────────────────────
-st.title("💥 Blast Design Tool")
-
-st.metric("Total Cost ($)", f"{results_si['cost']:,.2f}")
-st.metric("Powder Factor", f"{results_si['pf']:.4f}")
+st.title("💥 Blast Design & Cost Estimation")
 
 # ─────────────────────────────────────────────────────────────
-# DOWNLOAD BUTTON (SAFE)
+# RESULTS TABLE (Drill Design)
 # ─────────────────────────────────────────────────────────────
-col1, col2 = st.columns(2)
+st.subheader("📊 Drill Design Parameters")
 
-with col1:
-    st.download_button(
-        "Download TXT",
-        str(results_si),
-        file_name="report.txt"
-    )
+drill_df = pd.DataFrame([
+    ("Burden", f"{results['burden']:.3f} m"),
+    ("Spacing", f"{results['spacing']:.3f} m"),
+    ("Number of Holes", results['holes']),
+    ("Charge per Hole", f"{results['charge']:.4f} t"),
+], columns=["Parameter", "Value"])
 
-with col2:
-    st.download_button(
-        "Download Excel",
-        generate_excel_report(),
-        file_name=f"Blast_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
-        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    )
+st.table(drill_df)
+
+# ─────────────────────────────────────────────────────────────
+# RESULTS TABLE (Explosive & Rock)
+# ─────────────────────────────────────────────────────────────
+st.subheader("📦 Explosive & Rock Volume")
+
+rock_df = pd.DataFrame([
+    ("Total Explosive", f"{results['total_exp']:.3f} t"),
+    ("Rock Volume", f"{results['rock_vol']:.2f} m³"),
+    ("Powder Factor", f"{results['pf']:.4f} t/m³"),
+], columns=["Parameter", "Value"])
+
+st.table(rock_df)
+
+# ─────────────────────────────────────────────────────────────
+# COST BLOCK
+# ─────────────────────────────────────────────────────────────
+st.subheader("💰 Cost Estimation")
+
+st.markdown(f"""
+<div style="
+    background: linear-gradient(120deg, #062A3D, #063320);
+    border: 1px solid #0FBF6A;
+    border-radius: 8px;
+    padding: 18px 24px;
+    margin: 20px 0;
+">
+    <div style="color:#0FBF6A; font-family:monospace; font-size:12px;">
+        TOTAL BLASTING COST
+    </div>
+    <div style="color:#0FBF6A; font-family:monospace; font-size:38px; font-weight:bold;">
+        ${results['cost']:,.2f}
+    </div>
+    <div style="color:#4D7A99; font-size:12px;">
+        Based on {results['total_exp']:.3f} t × ${inputs['unit_cost']:.2f}/t
+    </div>
+</div>
+""", unsafe_allow_html=True)
+
+# ─────────────────────────────────────────────────────────────
+# INPUT SUMMARY TABLE
+# ─────────────────────────────────────────────────────────────
+st.subheader("📋 Input Summary")
+
+input_df = pd.DataFrame([
+    ("Bench Height", f"{inputs['bench_height']:.1f} m"),
+    ("Hole Diameter", f"{inputs['hole_diameter']:.4f} m"),
+    ("Rock Density", f"{inputs['rock_density']:.2f} t/m³"),
+    ("Explosive Density", f"{inputs['explosive_density']:.2f} t/m³"),
+    ("Bench Area", f"{inputs['area']:.1f} m²"),
+    ("Unit Cost", f"${inputs['unit_cost']:.2f}/t"),
+], columns=["Parameter", "Value"])
+
+st.table(input_df)
+
+# ─────────────────────────────────────────────────────────────
+# DOWNLOAD REPORT (TXT ONLY)
+# ─────────────────────────────────────────────────────────────
+def generate_report_text(inputs, results):
+    ts = datetime.now().strftime("%d %B %Y %H:%M:%S")
+    return f"""
+BLAST DESIGN REPORT
+{ts}
+
+Burden: {results['burden']:.3f} m
+Spacing: {results['spacing']:.3f} m
+Holes: {results['holes']}
+Charge per Hole: {results['charge']:.4f} t
+
+Total Explosive: {results['total_exp']:.3f} t
+Rock Volume: {results['rock_vol']:.2f} m³
+Powder Factor: {results['pf']:.4f} t/m³
+
+Total Cost: ${results['cost']:,.2f}
+"""
+
+st.download_button(
+    "📄 Download Report (TXT)",
+    generate_report_text(inputs, results),
+    file_name=f"BlastDesign_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
+)
