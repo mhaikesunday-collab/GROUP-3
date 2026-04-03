@@ -194,20 +194,10 @@ def kgpm3_to_density(value, unit):
     }
     return value * from_kgm3[unit]
 
-def mass_to_kg(value, unit):
-    to_kg = {"g": 0.001, "kg": 1, "t": 1000, "lb": 0.453592}
-    return value * to_kg[unit]
-
-def kg_to_mass(value, unit):
-    from_kg = {"g": 1000, "kg": 1, "t": 0.001, "lb": 2.20462}
-    return value * from_kg[unit]
-
 # ─────────────────────────────────────────────────────────────
 #  BACKEND CALCULATIONS (all SI: m, m², kg/m³, t = 1000 kg)
 # ─────────────────────────────────────────────────────────────
 def calc_burden(diameter_m: float, rock_density_kgpm3: float) -> float:
-    # burden formula expects rock density in t/m³? Original: 25 * d * (1/rock_density)
-    # rock_density in t/m³ = kg/m³ / 1000
     rock_density_tpm3 = rock_density_kgpm3 / 1000.0
     return 25 * diameter_m * (1.0 / rock_density_tpm3)
 
@@ -221,9 +211,8 @@ def calc_charge_per_hole(diameter_m: float, bench_height_m: float,
                           explosive_density_kgpm3: float) -> float:
     radius = diameter_m / 2.0
     volume_m3 = math.pi * (radius ** 2) * bench_height_m
-    # explosive mass in kg
     mass_kg = volume_m3 * explosive_density_kgpm3
-    return mass_kg / 1000.0  # return tonnes
+    return mass_kg / 1000.0  # tonnes
 
 def run_design(bench_height_m, hole_diameter_m, rock_density_kgpm3,
                explosive_density_kgpm3, unit_cost_per_tonne, area_m2):
@@ -240,6 +229,24 @@ def run_design(bench_height_m, hole_diameter_m, rock_density_kgpm3,
                 rock_vol_m3=rock_vol_m3, pf=pf, cost=cost)
 
 # ─────────────────────────────────────────────────────────────
+#  INITIALIZE SESSION STATE (to avoid KeyError)
+# ─────────────────────────────────────────────────────────────
+if "results_si" not in st.session_state:
+    # Default values in SI
+    default_inputs = dict(
+        bench_height_m=10.0,
+        hole_diameter_m=0.115,
+        rock_density_kgpm3=2700.0,   # 2.7 t/m³
+        explosive_density_kgpm3=850.0,  # 0.85 t/m³
+        unit_cost_per_tonne=450.0,
+        area_m2=5000.0,
+    )
+    default_results = run_design(**default_inputs)
+    st.session_state["results_si"] = default_results
+    st.session_state["inputs_si"] = default_inputs
+    st.session_state["display_units"] = {"length": "m", "area": "m²", "density": "t/m³"}
+
+# ─────────────────────────────────────────────────────────────
 #  SIDEBAR – flexible inputs with unit selection
 # ─────────────────────────────────────────────────────────────
 with st.sidebar:
@@ -248,7 +255,7 @@ with st.sidebar:
     # Bench Height
     col1, col2 = st.columns([2, 1])
     with col1:
-        bh_val = st.number_input("Bench Height", value=10.0, step=0.5, format="%.2f")
+        bh_val = st.number_input("Bench Height", value=10.0, step=0.5, format="%.2f", key="bh_val")
     with col2:
         bh_unit = st.selectbox("Unit", ["m", "ft", "cm", "inch"], index=0, key="bh_unit")
     bench_height_m = length_to_m(bh_val, bh_unit)
@@ -256,7 +263,7 @@ with st.sidebar:
     # Hole Diameter
     col1, col2 = st.columns([2, 1])
     with col1:
-        hd_val = st.number_input("Hole Diameter", value=0.115, step=0.005, format="%.4f")
+        hd_val = st.number_input("Hole Diameter", value=0.115, step=0.005, format="%.4f", key="hd_val")
     with col2:
         hd_unit = st.selectbox("Unit", ["m", "mm", "inch", "ft"], index=0, key="hd_unit")
     hole_diameter_m = length_to_m(hd_val, hd_unit)
@@ -264,52 +271,36 @@ with st.sidebar:
     # Rock Density
     col1, col2 = st.columns([2, 1])
     with col1:
-        rd_val = st.number_input("Rock Density", value=2.7, step=0.1, format="%.2f")
+        rd_val = st.number_input("Rock Density", value=2.7, step=0.1, format="%.2f", key="rd_val")
     with col2:
         rd_unit = st.selectbox("Unit", ["t/m³", "kg/m³", "g/cm³", "lb/ft³"], index=0, key="rd_unit")
-    rock_density_kgpm3 = rd_val * (1000.0 if rd_unit == "t/m³" else (1.0 if rd_unit == "kg/m³" else (1000.0 if rd_unit == "g/cm³" else 16.0185)))
-    # Convert to kg/m³ for SI
-    if rd_unit == "t/m³":
-        rock_density_kgpm3 = rd_val * 1000.0
-    elif rd_unit == "g/cm³":
-        rock_density_kgpm3 = rd_val * 1000.0
-    elif rd_unit == "lb/ft³":
-        rock_density_kgpm3 = rd_val * 16.0185
-    else:  # kg/m³
-        rock_density_kgpm3 = rd_val
+    rock_density_kgpm3 = density_to_kgpm3(rd_val, rd_unit)
     
     # Explosive Density
     col1, col2 = st.columns([2, 1])
     with col1:
-        ed_val = st.number_input("Explosive Density", value=0.85, step=0.05, format="%.2f")
+        ed_val = st.number_input("Explosive Density", value=0.85, step=0.05, format="%.2f", key="ed_val")
     with col2:
         ed_unit = st.selectbox("Unit", ["t/m³", "kg/m³", "g/cm³", "lb/ft³"], index=0, key="ed_unit")
-    if ed_unit == "t/m³":
-        explosive_density_kgpm3 = ed_val * 1000.0
-    elif ed_unit == "g/cm³":
-        explosive_density_kgpm3 = ed_val * 1000.0
-    elif ed_unit == "lb/ft³":
-        explosive_density_kgpm3 = ed_val * 16.0185
-    else:
-        explosive_density_kgpm3 = ed_val
+    explosive_density_kgpm3 = density_to_kgpm3(ed_val, ed_unit)
     
     # Bench Area
     col1, col2 = st.columns([2, 1])
     with col1:
-        area_val = st.number_input("Bench Area", value=5000.0, step=100.0, format="%.1f")
+        area_val = st.number_input("Bench Area", value=5000.0, step=100.0, format="%.1f", key="area_val")
     with col2:
         area_unit = st.selectbox("Unit", ["m²", "ft²", "ac", "ha"], index=0, key="area_unit")
     area_m2 = area_to_m2(area_val, area_unit)
     
-    # Unit Cost (always $/tonne, no conversion needed)
-    unit_cost = st.number_input("Explosive Unit Cost ($/t)", min_value=0.0, value=450.0, step=10.0, format="%.2f")
+    # Unit Cost (always $/tonne)
+    unit_cost = st.number_input("Explosive Unit Cost ($/t)", min_value=0.0, value=450.0, step=10.0, format="%.2f", key="unit_cost")
     
     # Output unit preferences
     st.markdown("---")
     st.markdown("### 📐 DISPLAY UNITS")
-    length_display_unit = st.selectbox("Show lengths in", ["m", "ft", "inch"], index=0)
-    area_display_unit = st.selectbox("Show areas in", ["m²", "ft²", "ac"], index=0)
-    density_display_unit = st.selectbox("Show density in", ["t/m³", "kg/m³", "lb/ft³"], index=0)
+    length_display_unit = st.selectbox("Show lengths in", ["m", "ft", "inch"], index=0, key="len_disp")
+    area_display_unit = st.selectbox("Show areas in", ["m²", "ft²", "ac"], index=0, key="area_disp")
+    density_display_unit = st.selectbox("Show density in", ["t/m³", "kg/m³", "lb/ft³"], index=0, key="dens_disp")
     
     run_btn = st.button("CALCULATE", use_container_width=True)
 
@@ -330,34 +321,29 @@ st.markdown('<div class="motto">BLAST LIKE A PRO, SAVE LIKE A BOSS</div>', unsaf
 st.title("💥 Blast Design & Cost Estimation")
 st.caption("Open-Pit Mining | Drill & Blast Engineering Tool | Flexible Units")
 
-# Unit converter expander (optional)
+# Optional unit converter expander (can be removed if not wanted)
 with st.expander("🔄 UNIT CONVERTER (Quick conversion tool)"):
-    conv_type = st.selectbox("Conversion type", ["Length", "Area", "Density", "Mass"])
-    val = st.number_input("Value", value=1.0)
+    conv_type = st.selectbox("Conversion type", ["Length", "Area", "Density"])
+    val = st.number_input("Value", value=1.0, key="conv_val")
     if conv_type == "Length":
-        from_u = st.selectbox("From", ["m", "ft", "inch", "cm", "mm"])
-        to_u = st.selectbox("To", ["m", "ft", "inch", "cm", "mm"], index=1)
+        from_u = st.selectbox("From", ["m", "ft", "inch", "cm", "mm"], key="len_from")
+        to_u = st.selectbox("To", ["m", "ft", "inch", "cm", "mm"], index=1, key="len_to")
         result = length_to_m(val, from_u)
         result = m_to_length(result, to_u)
     elif conv_type == "Area":
-        from_u = st.selectbox("From", ["m²", "ft²", "ac", "ha"])
-        to_u = st.selectbox("To", ["m²", "ft²", "ac", "ha"])
+        from_u = st.selectbox("From", ["m²", "ft²", "ac", "ha"], key="area_from")
+        to_u = st.selectbox("To", ["m²", "ft²", "ac", "ha"], key="area_to")
         result = area_to_m2(val, from_u)
         result = m2_to_area(result, to_u)
-    elif conv_type == "Density":
-        from_u = st.selectbox("From", ["t/m³", "kg/m³", "g/cm³", "lb/ft³"])
-        to_u = st.selectbox("To", ["t/m³", "kg/m³", "g/cm³", "lb/ft³"])
+    else:  # Density
+        from_u = st.selectbox("From", ["t/m³", "kg/m³", "g/cm³", "lb/ft³"], key="dens_from")
+        to_u = st.selectbox("To", ["t/m³", "kg/m³", "g/cm³", "lb/ft³"], key="dens_to")
         kgm3 = density_to_kgpm3(val, from_u)
         result = kgpm3_to_density(kgm3, to_u)
-    else:  # Mass
-        from_u = st.selectbox("From", ["t", "kg", "lb"])
-        to_u = st.selectbox("To", ["t", "kg", "lb"])
-        kg = mass_to_kg(val, from_u)
-        result = kg_to_mass(kg, to_u)
     st.success(f"Result: {result:.6f} {to_u}")
 
-# Run calculation on button or load defaults
-if run_btn or "results" not in st.session_state:
+# Run calculation when button is pressed
+if run_btn:
     inputs_si = dict(
         bench_height_m=bench_height_m,
         hole_diameter_m=hole_diameter_m,
@@ -375,11 +361,12 @@ if run_btn or "results" not in st.session_state:
         "density": density_display_unit,
     }
 
+# Retrieve from session state
 results_si = st.session_state["results_si"]
 inputs_si = st.session_state["inputs_si"]
-disp = st.session_state.get("display_units", {"length": "m", "area": "m²", "density": "t/m³"})
+disp = st.session_state["display_units"]
 
-# Convert results for display
+# Helper functions for display
 def disp_length(m):
     return m_to_length(m, disp["length"])
 def disp_area(m2):
@@ -403,7 +390,7 @@ st.subheader("📦 Explosive & Rock Volume")
 rock_data = pd.DataFrame([
     ("Total Explosive", f"{results_si['total_exp_tonnes']:.3f} t"),
     ("Rock Volume", f"{disp_area(results_si['rock_vol_m3']):.2f} {disp['area']}"),
-    ("Powder Factor", f"{results_si['pf']:.4f} t/m³"),  # PF is t per m³, remains as is
+    ("Powder Factor", f"{results_si['pf']:.4f} t/m³"),
 ], columns=["Parameter", "Value"])
 st.table(rock_data)
 
@@ -464,7 +451,7 @@ Unit Cost            : ${inputs_si['unit_cost_per_tonne']:.2f} /t
 def generate_excel_report():
     output = BytesIO()
     with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-        # Input sheet
+        # Input sheet (SI values)
         pd.DataFrame([
             ("Bench Height (m)", inputs_si['bench_height_m']),
             ("Hole Diameter (m)", inputs_si['hole_diameter_m']),
@@ -474,7 +461,7 @@ def generate_excel_report():
             ("Unit Cost ($/t)", inputs_si['unit_cost_per_tonne']),
         ], columns=["Parameter", "Value (SI)"]).to_excel(writer, sheet_name="Input SI", index=False)
         
-        # Results sheet
+        # Results sheet (SI)
         pd.DataFrame([
             ("Burden (m)", results_si['burden_m']),
             ("Spacing (m)", results_si['spacing_m']),
@@ -485,6 +472,14 @@ def generate_excel_report():
             ("Powder Factor (t/m³)", results_si['pf']),
             ("Total Cost ($)", results_si['cost']),
         ], columns=["Parameter", "Value (SI)"]).to_excel(writer, sheet_name="Results SI", index=False)
+        
+        # Display units sheet (for reference)
+        pd.DataFrame([
+            ("Length unit", disp['length']),
+            ("Area unit", disp['area']),
+            ("Density unit", disp['density']),
+        ], columns=["Display Setting", "Unit"]).to_excel(writer, sheet_name="Display Units", index=False)
+        
     output.seek(0)
     return output
 
