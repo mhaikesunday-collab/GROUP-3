@@ -16,7 +16,7 @@ import base64
 # ─────────────────────────────────────────────────────────────
 st.set_page_config(
     page_title="Blast Design Tool",
-    page_icon="💥",
+    page_icon="",
     layout="wide",
     initial_sidebar_state="expanded",
 )
@@ -72,11 +72,11 @@ if logo_b64:
     }}
     </style>
     <div class="hero-logo">
-        <div class="motto-overlay">💥 BLAST LIKE A PRO, SAVE LIKE A BOSS 💥</div>
+        <div class="motto-overlay"> BLAST LIKE A PRO, SAVE LIKE A BOSS </div>
     </div>
     """, unsafe_allow_html=True)
 else:
-    st.markdown('<div class="motto" style="margin-top:0;">💥 BLAST LIKE A PRO, SAVE LIKE A BOSS 💥</div>', unsafe_allow_html=True)
+    st.markdown('<div class="motto" style="margin-top:0;">  BLAST LIKE A PRO, SAVE LIKE A BOSS </div>', unsafe_allow_html=True)
 
 st.title("Blast Design & Cost Estimation Tool")
 st.caption("Open‑Pit Mining | Drill & Blast Engineering")
@@ -267,7 +267,7 @@ def run_design(bench_height_m, hole_diameter_m, rock_density_tpm3,
 #  SIDEBAR – INPUTS WITH INLINE UNITS (all start at 0)
 # ─────────────────────────────────────────────────────────────
 with st.sidebar:
-    st.markdown("### ⚙️ INPUT PARAMETERS")
+    st.markdown("### ⬇️ INPUT PARAMETERS")
     
     # Rock Density
     col1, col2 = st.columns([2, 1])
@@ -356,7 +356,7 @@ if "results" in st.session_state:
     })
     st.table(input_df)
     
-    st.subheader("📊 RESULTS")
+    st.subheader("📃RESULTS")
     result_items = [
         ("Burden (m)", res["burden_m"]),
         ("Spacing (m)", res["spacing_m"]),
@@ -405,7 +405,7 @@ Total Cost           : ${res['cost_usd']:,.2f}
     
     st.markdown("---")
     st.download_button(
-        "📄 Download Report (TXT)",
+        "📥 Download Report (TXT)",
         txt_report(),
         file_name=f"BlastDesign_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
     )
