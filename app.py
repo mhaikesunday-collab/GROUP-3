@@ -21,13 +21,46 @@ st.set_page_config(
 )
 
 # ─────────────────────────────────────────────────────────────
-#  GLOBAL CSS  – full dark theme + table styling
+#  GLOBAL CSS  – full dark theme + background image + motto
 # ─────────────────────────────────────────────────────────────
-st.markdown("""
+# NOTE: Replace the background image URL with a publicly accessible one.
+# For Google Drive, you need a direct link (e.g., via raw.githubusercontent.com or other hosting).
+# Example: url('https://your-image-host.com/mining-background.jpg')
+# If no image, the dark theme remains.
+background_image_url = ""  # <-- PUT YOUR DIRECT IMAGE URL HERE
+
+bg_style = ""
+if background_image_url:
+    bg_style = f"""
+    [data-testid="stAppViewContainer"] {{
+        background-image: url("{background_image_url}");
+        background-size: cover;
+        background-position: center;
+        background-attachment: fixed;
+    }}
+    [data-testid="stAppViewContainer"]::before {{
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(4, 16, 28, 0.85);  /* dark overlay for readability */
+        z-index: -1;
+    }}
+    """
+else:
+    bg_style = """
+    [data-testid="stAppViewContainer"] {
+        background-color: #04101C !important;
+    }
+    """
+
+st.markdown(f"""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Exo+2:wght@300;400;600;700&display=swap');
 
-:root {
+:root {{
     --bg-deep:      #04101C;
     --bg-panel:     #071A2B;
     --bg-card:      #0A2236;
@@ -41,43 +74,38 @@ st.markdown("""
     --text-label:   #88BDD6;
     --mono:         'Share Tech Mono', monospace;
     --body:         'Exo 2', sans-serif;
-}
+}}
 
-/* App background */
-html, body, [data-testid="stAppViewContainer"] {
-    background-color: var(--bg-deep) !important;
-    color: var(--text-main) !important;
-    font-family: var(--body);
-}
+{bg_style}
 
 /* Sidebar */
-[data-testid="stSidebar"] {
+[data-testid="stSidebar"] {{
     background-color: var(--bg-panel) !important;
     border-right: 1px solid var(--border);
-}
+}}
 
 /* Hide Streamlit default elements */
-#MainMenu, footer, header { visibility: hidden; }
-[data-testid="stDecoration"] { display: none; }
+#MainMenu, footer, header {{ visibility: hidden; }}
+[data-testid="stDecoration"] {{ display: none; }}
 
 /* Headers */
-h1, h2, h3, h4, h5, h6, .stMarkdown h1, .stMarkdown h2, .stMarkdown h3 {
+h1, h2, h3, h4, h5, h6, .stMarkdown h1, .stMarkdown h2, .stMarkdown h3 {{
     color: var(--accent-blue) !important;
     font-family: var(--mono) !important;
     letter-spacing: 1px;
-}
+}}
 
 /* Subheader */
-.stSubheader {
+.stSubheader {{
     color: var(--accent-green) !important;
     font-family: var(--mono) !important;
     border-bottom: 1px solid var(--border);
     padding-bottom: 6px;
     margin-top: 20px;
-}
+}}
 
 /* Tables */
-table {
+table {{
     width: 100%;
     background-color: var(--bg-card) !important;
     border-collapse: collapse;
@@ -85,9 +113,9 @@ table {
     overflow: hidden;
     box-shadow: 0 2px 4px rgba(0,0,0,0.2);
     margin-bottom: 20px;
-}
+}}
 
-th {
+th {{
     background-color: #0D2A3E !important;
     color: var(--accent-green) !important;
     font-family: var(--mono);
@@ -96,50 +124,67 @@ th {
     padding: 10px 12px;
     text-align: left;
     border-bottom: 1px solid var(--border);
-}
+}}
 
-td {
+td {{
     padding: 8px 12px;
     color: var(--text-main) !important;
     font-family: var(--body);
     font-size: 14px;
     border-bottom: 1px solid var(--border);
-}
+}}
 
-tr:last-child td {
+tr:last-child td {{
     border-bottom: none;
-}
+}}
 
 /* Cost highlight block */
-.cost-block {
+.cost-block {{
     background: linear-gradient(120deg, #062A3D, #063320);
     border: 1px solid var(--accent-green);
     border-radius: 8px;
     padding: 18px 24px;
     margin: 20px 0;
-}
-.cost-label {
+}}
+.cost-label {{
     font-family: var(--mono);
     font-size: 12px;
     letter-spacing: 2px;
     color: var(--accent-green);
     text-transform: uppercase;
     margin-bottom: 8px;
-}
-.cost-value {
+}}
+.cost-value {{
     font-family: var(--mono);
     font-size: 38px;
     color: var(--accent-green);
     font-weight: bold;
-}
-.cost-sub {
+}}
+.cost-sub {{
     font-size: 12px;
     color: var(--text-muted);
     margin-top: 6px;
-}
+}}
+
+/* Motto styling */
+.motto {{
+    text-align: center;
+    font-family: var(--mono);
+    font-size: 28px;
+    font-weight: bold;
+    letter-spacing: 4px;
+    color: var(--accent-green);
+    text-shadow: 0 0 8px rgba(15,191,106,0.5);
+    margin: 20px 0 30px 0;
+    padding: 15px;
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    background: rgba(4,16,28,0.6);
+    backdrop-filter: blur(2px);
+}}
 
 /* Download buttons */
-.stDownloadButton button {
+.stDownloadButton button {{
     background: linear-gradient(135deg, var(--mid-blue), var(--mid-green)) !important;
     color: white !important;
     font-family: var(--mono);
@@ -149,24 +194,33 @@ tr:last-child td {
     border-radius: 4px;
     padding: 10px 24px;
     transition: 0.2s;
-}
+}}
 
 /* Sidebar inputs */
-[data-testid="stSidebar"] .stNumberInput input {
+[data-testid="stSidebar"] .stNumberInput input {{
     background-color: #040E19 !important;
     color: var(--accent-blue) !important;
     border: 1px solid var(--border);
     border-radius: 4px;
-}
-[data-testid="stSidebar"] label {
+}}
+[data-testid="stSidebar"] label {{
     color: var(--text-label) !important;
-}
-[data-testid="stSidebar"] .stButton button {
+}}
+[data-testid="stSidebar"] .stButton button {{
     background: linear-gradient(135deg, var(--mid-blue), var(--mid-green));
     color: white;
     font-family: var(--mono);
     width: 100%;
-}
+}}
+
+/* Unit converter styling */
+.converter-card {{
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 20px;
+    margin: 10px 0;
+}}
 </style>
 """, unsafe_allow_html=True)
 
@@ -237,10 +291,9 @@ Unit Cost            : ${inputs['unit_cost']:.2f} /t
 """
 
 def generate_excel_report(inputs: dict, results: dict) -> BytesIO:
-    """Create an Excel file with multiple sheets and return as BytesIO."""
+    """Create an Excel file with multiple sheets using xlsxwriter engine."""
     output = BytesIO()
-    with pd.ExcelWriter(output, engine='openpyxl') as writer:
-        # Sheet 1: Input Summary
+    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
         input_df = pd.DataFrame([
             ("Bench Height (m)", inputs['bench_height']),
             ("Hole Diameter (m)", inputs['hole_diameter']),
@@ -251,7 +304,6 @@ def generate_excel_report(inputs: dict, results: dict) -> BytesIO:
         ], columns=["Parameter", "Value"])
         input_df.to_excel(writer, sheet_name="Input Summary", index=False)
         
-        # Sheet 2: Drill Design
         drill_df = pd.DataFrame([
             ("Burden (m)", results['burden']),
             ("Spacing (m)", results['spacing']),
@@ -260,7 +312,6 @@ def generate_excel_report(inputs: dict, results: dict) -> BytesIO:
         ], columns=["Parameter", "Value"])
         drill_df.to_excel(writer, sheet_name="Drill Design", index=False)
         
-        # Sheet 3: Explosive & Rock
         rock_df = pd.DataFrame([
             ("Total Explosive (t)", results['total_exp']),
             ("Rock Volume (m³)", results['rock_vol']),
@@ -268,7 +319,6 @@ def generate_excel_report(inputs: dict, results: dict) -> BytesIO:
         ], columns=["Parameter", "Value"])
         rock_df.to_excel(writer, sheet_name="Explosive & Rock", index=False)
         
-        # Sheet 4: Cost Summary
         cost_df = pd.DataFrame([
             ("Total Blasting Cost ($)", results['cost']),
             ("Explosive Unit Cost ($/t)", inputs['unit_cost']),
@@ -278,6 +328,46 @@ def generate_excel_report(inputs: dict, results: dict) -> BytesIO:
         
     output.seek(0)
     return output
+
+# ─────────────────────────────────────────────────────────────
+#  UNIT CONVERSION FUNCTIONS
+# ─────────────────────────────────────────────────────────────
+def convert_length(value, from_unit, to_unit):
+    # meters base
+    to_m = {
+        "mm": 0.001, "cm": 0.01, "m": 1.0, "km": 1000.0,
+        "inch": 0.0254, "ft": 0.3048, "yd": 0.9144
+    }
+    return value * to_m[from_unit] / to_m[to_unit]
+
+def convert_mass(value, from_unit, to_unit):
+    # kilograms base
+    to_kg = {
+        "g": 0.001, "kg": 1.0, "t": 1000.0, "lb": 0.453592, "oz": 0.0283495
+    }
+    return value * to_kg[from_unit] / to_kg[to_unit]
+
+def convert_volume(value, from_unit, to_unit):
+    # cubic meters base
+    to_m3 = {
+        "m³": 1.0, "L": 0.001, "gal_us": 0.00378541, "gal_uk": 0.00454609,
+        "ft³": 0.0283168, "in³": 1.6387e-5
+    }
+    return value * to_m3[from_unit] / to_m3[to_unit]
+
+def convert_area(value, from_unit, to_unit):
+    # square meters base
+    to_m2 = {
+        "m²": 1.0, "km²": 1e6, "ha": 10000.0, "ft²": 0.092903, "ac": 4046.86
+    }
+    return value * to_m2[from_unit] / to_m2[to_unit]
+
+def convert_density(value, from_unit, to_unit):
+    # kg/m³ base
+    to_kgm3 = {
+        "kg/m³": 1.0, "g/cm³": 1000.0, "t/m³": 1000.0, "lb/ft³": 16.0185
+    }
+    return value * to_kgm3[from_unit] / to_kgm3[to_unit]
 
 # ─────────────────────────────────────────────────────────────
 #  SIDEBAR
@@ -298,6 +388,42 @@ with st.sidebar:
 # ─────────────────────────────────────────────────────────────
 st.title("💥 Blast Design & Cost Estimation")
 st.caption("Open-Pit Mining | Drill & Blast Engineering Tool")
+
+# Motto in capitals
+st.markdown('<div class="motto">BLAST LIKE A PRO, SAVE LIKE A BOSS</div>', unsafe_allow_html=True)
+
+# Unit Converter Expander
+with st.expander("🔄 UNIT CONVERTER - Convert between common mining units"):
+    st.markdown('<div class="converter-card">', unsafe_allow_html=True)
+    conv_type = st.selectbox("Select conversion type", ["Length", "Mass", "Volume", "Area", "Density"])
+    
+    col_conv1, col_conv2, col_conv3 = st.columns(3)
+    with col_conv1:
+        value_in = st.number_input("Value to convert", value=1.0, step=0.1, key="conv_val")
+    with col_conv2:
+        if conv_type == "Length":
+            from_unit = st.selectbox("From", ["mm", "cm", "m", "km", "inch", "ft", "yd"])
+            to_unit = st.selectbox("To", ["mm", "cm", "m", "km", "inch", "ft", "yd"], index=2)
+            result = convert_length(value_in, from_unit, to_unit)
+        elif conv_type == "Mass":
+            from_unit = st.selectbox("From", ["g", "kg", "t", "lb", "oz"])
+            to_unit = st.selectbox("To", ["g", "kg", "t", "lb", "oz"], index=1)
+            result = convert_mass(value_in, from_unit, to_unit)
+        elif conv_type == "Volume":
+            from_unit = st.selectbox("From", ["m³", "L", "gal_us", "gal_uk", "ft³", "in³"])
+            to_unit = st.selectbox("To", ["m³", "L", "gal_us", "gal_uk", "ft³", "in³"])
+            result = convert_volume(value_in, from_unit, to_unit)
+        elif conv_type == "Area":
+            from_unit = st.selectbox("From", ["m²", "km²", "ha", "ft²", "ac"])
+            to_unit = st.selectbox("To", ["m²", "km²", "ha", "ft²", "ac"])
+            result = convert_area(value_in, from_unit, to_unit)
+        elif conv_type == "Density":
+            from_unit = st.selectbox("From", ["kg/m³", "g/cm³", "t/m³", "lb/ft³"])
+            to_unit = st.selectbox("To", ["kg/m³", "g/cm³", "t/m³", "lb/ft³"])
+            result = convert_density(value_in, from_unit, to_unit)
+    with col_conv3:
+        st.metric("Converted value", f"{result:.6f}")
+    st.markdown('</div>', unsafe_allow_html=True)
 
 if run_btn or "results" not in st.session_state:
     inputs = dict(
@@ -320,8 +446,6 @@ inputs  = st.session_state["inputs"]
 # ─────────────────────────────────────────────────────────────
 
 st.subheader("📊 Drill Design Parameters")
-
-# Table 1: Drill Design
 drill_data = pd.DataFrame([
     ("Burden", f"{results['burden']:.3f} m"),
     ("Spacing", f"{results['spacing']:.3f} m"),
@@ -331,8 +455,6 @@ drill_data = pd.DataFrame([
 st.table(drill_data)
 
 st.subheader("📦 Explosive & Rock Volume")
-
-# Table 2: Explosive & Rock
 rock_data = pd.DataFrame([
     ("Total Explosive", f"{results['total_exp']:.3f} t"),
     ("Rock Volume", f"{results['rock_vol']:.2f} m³"),
@@ -341,8 +463,6 @@ rock_data = pd.DataFrame([
 st.table(rock_data)
 
 st.subheader("💰 Cost Estimation")
-
-# Cost highlight block
 st.markdown(f"""
 <div class="cost-block">
     <div class="cost-label">Total Blasting Cost — Bench Estimate</div>
@@ -354,8 +474,6 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 st.subheader("📋 Input Summary")
-
-# Table 3: Input parameters
 input_data = pd.DataFrame([
     ("Bench Height", f"{inputs['bench_height']:.1f} m"),
     ("Hole Diameter", f"{inputs['hole_diameter']:.4f} m"),
@@ -367,7 +485,7 @@ input_data = pd.DataFrame([
 st.table(input_data)
 
 # ─────────────────────────────────────────────────────────────
-#  DOWNLOAD BUTTONS (TXT + EXCEL)
+#  DOWNLOAD BUTTONS
 # ─────────────────────────────────────────────────────────────
 col_btn1, col_btn2 = st.columns(2)
 
