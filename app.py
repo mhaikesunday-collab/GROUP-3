@@ -349,7 +349,7 @@ if "results" in st.session_state:
     ins = st.session_state["inputs_si"]
     
     # Vertical stack: INPUTS → RESULTS → Cost → Download
-    st.subheader("📥 INPUTS")
+    st.subheader("INPUTS")
     input_df = pd.DataFrame({
         "Parameter": list(ins.keys()),
         "Value": [f"{v:.4f}" if isinstance(v, float) else v for v in ins.values()]
