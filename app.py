@@ -8,6 +8,7 @@ import math
 import streamlit as st
 from datetime import datetime
 import pandas as pd
+import os
 
 # ─────────────────────────────────────────────────────────────
 #  PAGE CONFIG
@@ -166,12 +167,15 @@ td {
 """, unsafe_allow_html=True)
 
 # ─────────────────────────────────────────────────────────────
-#  LOGO (local file "logo.png")
+#  LOGO (local file "logo.png") – with error handling
 # ─────────────────────────────────────────────────────────────
-try:
-    st.image("logo.png", width=150, use_container_width=False)
-except FileNotFoundError:
-    st.warning("Logo file 'logo.png' not found. Please add it to the same folder.")
+if os.path.exists("logo.png"):
+    try:
+        st.image("logo.png", width=150, use_container_width=False)
+    except Exception as e:
+        st.warning(f"Could not load logo: {e}")
+        st.markdown('<div class="logo-container">💥 <strong>BLAST DESIGN</strong> 💥</div>', unsafe_allow_html=True)
+else:
     st.markdown('<div class="logo-container">💥 <strong>BLAST DESIGN</strong> 💥</div>', unsafe_allow_html=True)
 
 # ─────────────────────────────────────────────────────────────
