@@ -139,6 +139,7 @@ td {
     border: none;
     border-radius: 4px;
     padding: 10px 24px;
+    width: 100%;
 }
 
 /* Sidebar inputs */
@@ -296,33 +297,29 @@ if "results" in st.session_state:
     res = st.session_state["results"]
     ins = st.session_state["inputs_si"]
     
-    # Two columns for tables
-    col_left, col_right = st.columns(2)
+    # Single vertical stack: Inputs → Results → Cost → Download
+    st.subheader("📥 Inputs (converted to SI)")
+    input_df = pd.DataFrame({
+        "Parameter": list(ins.keys()),
+        "Value": [f"{v:.4f}" if isinstance(v, float) else v for v in ins.values()]
+    })
+    st.table(input_df)
     
-    with col_left:
-        st.subheader("📥 Inputs (converted to SI)")
-        input_df = pd.DataFrame({
-            "Parameter": list(ins.keys()),
-            "Value": [f"{v:.4f}" if isinstance(v, float) else v for v in ins.values()]
-        })
-        st.table(input_df)
-    
-    with col_right:
-        st.subheader("📊 Results")
-        result_items = [
-            ("Burden (m)", res["burden_m"]),
-            ("Spacing (m)", res["spacing_m"]),
-            ("Number of Holes", res["holes"]),
-            ("Charge per Hole (t)", res["charge_t"]),
-            ("Total Explosive (t)", res["total_exp_t"]),
-            ("Rock Volume (m³)", res["rock_vol_m3"]),
-            ("Powder Factor (t/m³)", res["pf_tpm3"]),
-        ]
-        result_df = pd.DataFrame({
-            "Parameter": [item[0] for item in result_items],
-            "Value": [f"{item[1]:.4f}" if isinstance(item[1], float) else item[1] for item in result_items]
-        })
-        st.table(result_df)
+    st.subheader("📊 Results")
+    result_items = [
+        ("Burden (m)", res["burden_m"]),
+        ("Spacing (m)", res["spacing_m"]),
+        ("Number of Holes", res["holes"]),
+        ("Charge per Hole (t)", res["charge_t"]),
+        ("Total Explosive (t)", res["total_exp_t"]),
+        ("Rock Volume (m³)", res["rock_vol_m3"]),
+        ("Powder Factor (t/m³)", res["pf_tpm3"]),
+    ]
+    result_df = pd.DataFrame({
+        "Parameter": [item[0] for item in result_items],
+        "Value": [f"{item[1]:.4f}" if isinstance(item[1], float) else item[1] for item in result_items]
+    })
+    st.table(result_df)
     
     # Cost block
     st.markdown(f"""
@@ -336,8 +333,6 @@ if "results" in st.session_state:
     """, unsafe_allow_html=True)
     
     # Download TXT report only
-    st.markdown("---")
-    
     def txt_report():
         return f"""
 BLAST DESIGN REPORT
@@ -357,6 +352,7 @@ Powder Factor        : {res['pf_tpm3']:.4f} t/m³
 Total Cost           : ${res['cost_usd']:,.2f}
 """
     
+    st.markdown("---")
     st.download_button(
         "📄 Download Report (TXT)",
         txt_report(),
