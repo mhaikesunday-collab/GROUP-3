@@ -33,7 +33,7 @@ def get_base64_image(image_path):
         return None
 
 # ─────────────────────────────────────────────────────────────
-#  FULL-WIDTH LOGO WITH OVERLAID MOTTO
+#  FULL-WIDTH LOGO WITH OVERLAID MOTTO (compact at bottom)
 # ─────────────────────────────────────────────────────────────
 logo_b64 = get_base64_image("logo.png")
 if logo_b64:
@@ -49,22 +49,23 @@ if logo_b64:
         margin-bottom: 20px;
         position: relative;
         display: flex;
-        align-items: center;
+        align-items: flex-end;
         justify-content: center;
         box-shadow: 0 4px 12px rgba(0,0,0,0.3);
     }}
     .hero-logo .motto-overlay {{
         font-family: 'Share Tech Mono', monospace;
-        font-size: 32px;
+        font-size: 18px;
         font-weight: bold;
-        letter-spacing: 4px;
+        letter-spacing: 2px;
         color: #0FBF6A;
-        text-shadow: 0 0 10px #04101C, 2px 2px 4px black;
-        background: rgba(4, 16, 28, 0.7);
-        padding: 15px 30px;
-        border-radius: 50px;
+        text-shadow: 0 0 6px black;
+        background: rgba(4, 16, 28, 0.75);
+        padding: 8px 20px;
+        border-radius: 30px;
         text-align: center;
-        backdrop-filter: blur(4px);
+        backdrop-filter: blur(3px);
+        margin-bottom: 15px;
     }}
     </style>
     <div class="hero-logo">
