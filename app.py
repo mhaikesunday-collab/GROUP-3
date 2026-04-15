@@ -242,15 +242,15 @@ def run_design(bench_height_m, hole_diameter_m, rock_density_tpm3,
     if explosive_density_tpm3 <= 0:
         return None
     
-    burden = 25 * hole_diameter_m 
+    burden = 25 * hole_diameter_m * (1 / rock_density_tpm3)
     spacing = 1.25 * burden
-    holes = (area_m2 / (burden * spacing))
+    holes = max(1, int(area_m2 / (burden * spacing)))
     radius = hole_diameter_m / 2
     volume_m3 = math.pi * (radius ** 2) * bench_height_m
     charge_per_hole_t = volume_m3 * explosive_density_tpm3
     total_exp_t = charge_per_hole_t * holes
     rock_vol_m3 = area_m2 * bench_height_m
-    pf = total_exp_kg / rock_vol_m3
+    pf = total_exp_t / rock_vol_m3
     cost = total_exp_t * unit_cost_dpt
     return {
         "burden_m": burden,
