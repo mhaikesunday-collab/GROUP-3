@@ -2,6 +2,7 @@
 BLAST DESIGN & COST ESTIMATION TOOL
 Open-Pit Mining | Streamlit App
 Author: mhaike
+Updated: Konya & Walter Burden Formula
 """
 
 import math
@@ -16,7 +17,7 @@ import base64
 # ─────────────────────────────────────────────────────────────
 st.set_page_config(
     page_title="Blast Design Tool",
-    page_icon="",
+    page_icon="🧨",
     layout="wide",
     initial_sidebar_state="expanded",
 )
@@ -72,11 +73,11 @@ if logo_b64:
     }}
     </style>
     <div class="hero-logo">
-        <div class="motto-overlay"> BLAST LIKE A PRO, SAVE LIKE A BOSS </div>
+        <div class="motto-overlay">🧨 BLAST LIKE A PRO, SAVE LIKE A BOSS 🧨</div>
     </div>
     """, unsafe_allow_html=True)
 else:
-    st.markdown('<div class="motto" style="margin-top:0;">  BLAST LIKE A PRO, SAVE LIKE A BOSS </div>', unsafe_allow_html=True)
+    st.markdown('<div class="motto" style="margin-top:0;"> 🧨 BLAST LIKE A PRO, SAVE LIKE A BOSS 🧨</div>', unsafe_allow_html=True)
 
 st.title("Blast Design & Cost Estimation Tool")
 st.caption("Open‑Pit Mining | Drill & Blast Engineering")
@@ -229,38 +230,54 @@ def cost_to_dollar_per_tonne(value, unit):
     return value * to_dpt.get(unit, 1.0)
 
 # ─────────────────────────────────────────────────────────────
-#  CALCULATION ENGINE (SI: m, m², t/m³, $/t)
-#  Returns None if any required input is zero or negative
+#  CALCULATION ENGINE (Konya & Walter for burden)
 # ─────────────────────────────────────────────────────────────
 def run_design(bench_height_m, hole_diameter_m, rock_density_tpm3,
-               explosive_density_tpm3, unit_cost_dpt, area_m2):
-    # Prevent division by zero or invalid dimensions
-    if rock_density_tpm3 <= 0:
-        return None
-    if bench_height_m <= 0 or hole_diameter_m <= 0 or area_m2 <= 0:
-        return None
-    if explosive_density_tpm3 <= 0:
+               explosive_density_tpm3, unit_cost_dpt, area_m2, spacing_ratio=1.3):
+    """
+    Blast design using Konya & Walter formula for burden.
+    All inputs in SI base units: m, t/m³, $/t.
+    Returns None if any required input is invalid.
+    """
+    # Input validation
+    if any(v <= 0 for v in [rock_density_tpm3, bench_height_m,
+                             hole_diameter_m, area_m2, explosive_density_tpm3]):
         return None
     
-    burden = 25 * hole_diameter_m * (1 / rock_density_tpm3)
-    spacing = 1.25 * burden
-    holes = max(1, int(area_m2 / (burden * spacing)))
-    radius = hole_diameter_m / 2
-    volume_m3 = math.pi * (radius ** 2) * bench_height_m
-    charge_per_hole_t = volume_m3 * explosive_density_tpm3
+    # Convert hole diameter from meters to mm for Konya & Walter formula
+    D_mm = hole_diameter_m * 1000.0
+    
+    # Konya & Walter Burden Formula (Result in meters)
+    # B = 0.012 * [ (2*ρe/ρr) + 1.5 ] * D_mm
+    ratio = (2.0 * explosive_density_tpm3) / rock_density_tpm3
+    burden_m = 0.012 * (ratio + 1.5) * D_mm
+    
+    # Spacing: S = m * B (user-defined spacing ratio)
+    spacing_m = spacing_ratio * burden_m
+    
+    # Number of holes (ceil to ensure coverage)
+    holes = max(1, math.ceil(area_m2 / (burden_m * spacing_m)))
+    
+    # Explosive charge per hole (full column, no stemming/subdrill deduction)
+    hole_radius_m = hole_diameter_m / 2.0
+    hole_volume_m3 = math.pi * (hole_radius_m ** 2) * bench_height_m
+    charge_per_hole_t = hole_volume_m3 * explosive_density_tpm3
+    
+    # Totals
     total_exp_t = charge_per_hole_t * holes
     rock_vol_m3 = area_m2 * bench_height_m
-    pf = total_exp_t / rock_vol_m3
-    cost = total_exp_t * unit_cost_dpt
+    powder_factor_tpm3 = total_exp_t / rock_vol_m3
+    total_cost_usd = total_exp_t * unit_cost_dpt
+    
     return {
-        "burden_m": burden,
-        "spacing_m": spacing,
+        "burden_m": burden_m,
+        "spacing_m": spacing_m,
         "holes": holes,
         "charge_t": charge_per_hole_t,
         "total_exp_t": total_exp_t,
         "rock_vol_m3": rock_vol_m3,
-        "pf_tpm3": pf,
-        "cost_usd": cost,
+        "pf_tpm3": powder_factor_tpm3,
+        "cost_usd": total_cost_usd,
     }
 
 # ─────────────────────────────────────────────────────────────
@@ -311,6 +328,15 @@ with st.sidebar:
     with col2:
         cost_unit = st.selectbox("Unit", ["$/t", "$/kg"], index=0, key="cost_u")
     
+    # Spacing Ratio (new)
+    col1, col2 = st.columns([2, 1])
+    with col1:
+        spacing_ratio = st.number_input("Spacing Ratio (S/B)", min_value=1.0, max_value=2.0,
+                                        value=1.3, step=0.05, format="%.2f",
+                                        help="Ratio of spacing to burden (typical: 1.0–1.5)")
+    with col2:
+        st.markdown("")  # Placeholder for alignment
+    
     run_btn = st.button("CALCULATE", use_container_width=True)
 
 # ─────────────────────────────────────────────────────────────
@@ -326,7 +352,7 @@ if run_btn:
     unit_cost_dpt = cost_to_dollar_per_tonne(cost_val, cost_unit)
     
     results = run_design(bench_height_m, hole_diameter_m, rock_density_tpm3,
-                         explosive_density_tpm3, unit_cost_dpt, area_m2)
+                         explosive_density_tpm3, unit_cost_dpt, area_m2, spacing_ratio)
     
     if results is None:
         st.error("❌ Please enter positive values for all inputs (Rock Density, Bench Height, Hole Diameter, Explosive Density, Bench Area).")
@@ -341,6 +367,7 @@ if run_btn:
             "Explosive Density (t/m³)": explosive_density_tpm3,
             "Bench Area (m²)": area_m2,
             "Unit Cost ($/t)": unit_cost_dpt,
+            "Spacing Ratio": spacing_ratio,
         }
 
 # Display results if available
@@ -349,14 +376,14 @@ if "results" in st.session_state:
     ins = st.session_state["inputs_si"]
     
     # Vertical stack: INPUTS → RESULTS → Cost → Download
-    st.subheader("INPUTS")
+    st.subheader("📋 INPUTS")
     input_df = pd.DataFrame({
         "Parameter": list(ins.keys()),
         "Value": [f"{v:.4f}" if isinstance(v, float) else v for v in ins.values()]
     })
     st.table(input_df)
     
-    st.subheader("📃RESULTS")
+    st.subheader("📊 RESULTS")
     result_items = [
         ("Burden (m)", res["burden_m"]),
         ("Spacing (m)", res["spacing_m"]),
@@ -365,6 +392,7 @@ if "results" in st.session_state:
         ("Total Explosive (t)", res["total_exp_t"]),
         ("Rock Volume (m³)", res["rock_vol_m3"]),
         ("Powder Factor (t/m³)", res["pf_tpm3"]),
+        ("Powder Factor (kg/m³)", res["pf_tpm3"] * 1000.0),
     ]
     result_df = pd.DataFrame({
         "Parameter": [item[0] for item in result_items],
@@ -399,7 +427,7 @@ Number of Holes      : {res['holes']}
 Charge per Hole      : {res['charge_t']:.4f} t
 Total Explosive      : {res['total_exp_t']:.3f} t
 Rock Volume          : {res['rock_vol_m3']:.2f} m³
-Powder Factor        : {res['pf_tpm3']:.4f} t/m³
+Powder Factor        : {res['pf_tpm3']:.4f} t/m³  ( {res['pf_tpm3']*1000:.2f} kg/m³ )
 Total Cost           : ${res['cost_usd']:,.2f}
 """
     
