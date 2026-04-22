@@ -1,471 +1,536 @@
-"""
-BLAST DESIGN & COST ESTIMATION TOOL
-Open-Pit Mining | Streamlit App
-Author: mhaike
-Updated: Konya & Walter Burden Formula
-"""
-
 import math
 import streamlit as st
 from datetime import datetime
 import pandas as pd
-import os
-import base64
 
-# ─────────────────────────────────────────────────────────────
-#  PAGE CONFIG
-# ─────────────────────────────────────────────────────────────
-st.set_page_config(
-    page_title="Blast Design Tool",
-    page_icon="🧨",
-    layout="wide",
-    initial_sidebar_state="expanded",
-)
+st.set_page_config(page_title="Blast Cost Estimator", layout="wide", page_icon="💣")
 
-# ─────────────────────────────────────────────────────────────
-#  FUNCTION TO GET BASE64 OF LOCAL IMAGE
-# ─────────────────────────────────────────────────────────────
-def get_base64_image(image_path):
-    try:
-        with open(image_path, "rb") as f:
-            data = f.read()
-        return base64.b64encode(data).decode()
-    except:
-        return None
-
-# ─────────────────────────────────────────────────────────────
-#  FULL-WIDTH LOGO WITH COMPACT MOTTO
-# ─────────────────────────────────────────────────────────────
-logo_b64 = get_base64_image("logo.png")
-if logo_b64:
-    st.markdown(f"""
-    <style>
-    .hero-logo {{
-        background-image: url("data:image/png;base64,{logo_b64}");
-        background-size: cover;
-        background-position: center;
-        height: 150px;
-        width: 100%;
-        border-radius: 12px;
-        margin-bottom: 20px;
-        position: relative;
-        display: flex;
-        align-items: flex-end;
-        justify-content: center;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-    }}
-    .hero-logo .motto-overlay {{
-        font-family: 'Share Tech Mono', monospace;
-        font-size: 14px;
-        font-weight: bold;
-        letter-spacing: 1px;
-        color: #0FBF6A;
-        text-shadow: 0 0 4px black;
-        background: rgba(4, 16, 28, 0.8);
-        padding: 4px 12px;
-        border-radius: 20px;
-        text-align: center;
-        backdrop-filter: blur(2px);
-        margin-bottom: 8px;
-        white-space: nowrap;
-        max-width: 95%;
-        overflow-x: auto;
-    }}
-    </style>
-    <div class="hero-logo">
-        <div class="motto-overlay">🧨 BLAST LIKE A PRO, SAVE LIKE A BOSS 🧨</div>
-    </div>
-    """, unsafe_allow_html=True)
-else:
-    st.markdown('<div class="motto" style="margin-top:0;"> 🧨 BLAST LIKE A PRO, SAVE LIKE A BOSS 🧨</div>', unsafe_allow_html=True)
-
-st.title("Blast Design & Cost Estimation Tool")
-st.caption("Open‑Pit Mining | Drill & Blast Engineering")
-
-# ─────────────────────────────────────────────────────────────
-#  GLOBAL CSS – dark theme + table styling
-# ─────────────────────────────────────────────────────────────
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Exo+2:wght@300;400;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,700;1,400;1,600;1,700&family=Lora:ital,wght@0,400;0,600;1,400;1,600&family=DM+Mono:ital,wght@0,300;0,400;1,300;1,400&family=Cormorant+Garamond:ital,wght@0,300;0,600;1,300;1,400;1,600&display=swap');
 
-:root {
-    --bg-deep:      #04101C;
-    --bg-panel:     #071A2B;
-    --bg-card:      #0A2236;
-    --border:       #0D3D5C;
-    --accent-blue:  #12A3D8;
-    --accent-green: #0FBF6A;
-    --mid-blue:     #0A7FAD;
-    --mid-green:    #0C9A56;
-    --text-main:    #D6EEF8;
-    --text-muted:   #4D7A99;
-    --text-label:   #88BDD6;
-    --mono:         'Share Tech Mono', monospace;
-    --body:         'Exo 2', sans-serif;
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body,
+[data-testid="stAppViewContainer"],
+[data-testid="stMain"] {
+    background: #EEE9E0 !important;
+    color: #1A1A18 !important;
+}
+[data-testid="stHeader"] { background: transparent !important; }
+[data-testid="stSidebar"] { display: none !important; }
+#MainMenu, footer { visibility: hidden; }
+
+[data-testid="stAppViewContainer"] > .main > .block-container {
+    padding: 0 !important;
+    max-width: 100% !important;
 }
 
-html, body, [data-testid="stAppViewContainer"] {
-    background-color: var(--bg-deep) !important;
-    color: var(--text-main) !important;
-    font-family: var(--body);
-}
-
-[data-testid="stSidebar"] {
-    background-color: var(--bg-panel) !important;
-    border-right: 1px solid var(--border);
-}
-
-#MainMenu, footer, header { visibility: hidden; }
-[data-testid="stDecoration"] { display: none; }
-
-/* Headers */
-h1, h2, h3, h4, h5, h6, .stMarkdown h1, .stMarkdown h2, .stMarkdown h3 {
-    color: var(--accent-blue) !important;
-    font-family: var(--mono) !important;
-}
-
-.stSubheader {
-    color: var(--accent-green) !important;
-    font-family: var(--mono) !important;
-    border-bottom: 1px solid var(--border);
-    padding-bottom: 6px;
-}
-
-/* Tables */
-table {
-    width: 100%;
-    background-color: var(--bg-card) !important;
-    border-collapse: collapse;
-    border-radius: 8px;
+/* ═══════════════════════════
+   MASTHEAD
+═══════════════════════════ */
+.masthead {
+    background: #1A2E1A;
+    padding: 52px 72px 44px;
+    position: relative;
     overflow: hidden;
-    margin-bottom: 20px;
 }
-th {
-    background-color: #0D2A3E !important;
-    color: var(--accent-green) !important;
-    font-family: var(--mono);
-    padding: 10px 12px;
+.masthead::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(
+        90deg,
+        transparent, transparent 80px,
+        rgba(255,255,255,0.012) 80px,
+        rgba(255,255,255,0.012) 81px
+    );
+    pointer-events: none;
 }
-td {
-    padding: 8px 12px;
-    color: var(--text-main) !important;
-    border-bottom: 1px solid var(--border);
+.masthead::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #C0392B 0%, #E05A3A 40%, transparent 100%);
+}
+.mh-eyebrow {
+    font-family: 'DM Mono', monospace;
+    font-style: italic;
+    font-size: 10px;
+    letter-spacing: 6px;
+    color: #6B9E6B;
+    text-transform: uppercase;
+    margin-bottom: 18px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.mh-eyebrow::before {
+    content: '';
+    display: inline-block;
+    width: 28px; height: 1px;
+    background: #6B9E6B;
+}
+.mh-title {
+    font-family: 'Playfair Display', serif;
+    font-style: italic;
+    font-weight: 700;
+    font-size: 58px;
+    color: #EEE9E0;
+    line-height: 1.0;
+    letter-spacing: -1.5px;
+    margin-bottom: 12px;
+}
+.mh-title em { color: #C0392B; font-style: italic; }
+.mh-desc {
+    font-family: 'Cormorant Garamond', serif;
+    font-style: italic;
+    font-weight: 300;
+    font-size: 16px;
+    color: #5A7A5A;
+    letter-spacing: 2px;
+    margin-top: 6px;
 }
 
-/* Cost block */
-.cost-block {
-    background: linear-gradient(120deg, #062A3D, #063320);
-    border: 1px solid var(--accent-green);
-    border-radius: 8px;
-    padding: 18px 24px;
-    margin: 20px 0;
+/* ═══════════════════════════
+   SECTION RULE
+═══════════════════════════ */
+.sec-rule {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin: 0 0 28px 0;
 }
-.cost-label {
-    font-family: var(--mono);
-    font-size: 12px;
-    color: var(--accent-green);
+.sec-rule-icon { font-size: 16px; line-height: 1; }
+.sec-rule-txt {
+    font-family: 'Cormorant Garamond', serif;
+    font-style: italic;
+    font-weight: 600;
+    font-size: 11px;
+    letter-spacing: 6px;
+    color: #1A2E1A;
     text-transform: uppercase;
 }
-.cost-value {
-    font-family: var(--mono);
-    font-size: 38px;
-    color: var(--accent-green);
-    font-weight: bold;
-}
-.cost-sub {
-    font-size: 12px;
-    color: var(--text-muted);
+.sec-rule-line {
+    flex: 1; height: 1px;
+    background: linear-gradient(90deg, #1A2E1A 0%, transparent 100%);
+    opacity: 0.18;
 }
 
-/* Download button */
-.stDownloadButton button {
-    background: linear-gradient(135deg, var(--mid-blue), var(--mid-green)) !important;
-    color: white !important;
-    font-family: var(--mono);
-    border: none;
-    border-radius: 4px;
-    padding: 10px 24px;
-    width: 100%;
+/* ═══════════════════════════
+   INPUT CARDS
+═══════════════════════════ */
+.inp-card {
+    background: #F8F4EE;
+    border-radius: 3px;
+    padding: 16px 20px 8px;
+    margin-bottom: 14px;
+    border-top: 3px solid #1A2E1A;
+    transition: box-shadow 0.2s, transform 0.2s;
+}
+.inp-card:hover {
+    box-shadow: 4px 4px 0 #D4CECC;
+    transform: translateY(-1px);
+}
+.inp-card-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 4px;
+}
+.inp-card-icon { font-size: 13px; opacity: 0.85; }
+.inp-card-label {
+    font-family: 'Lora', serif;
+    font-style: italic;
+    font-size: 11px;
+    font-weight: 600;
+    color: #1A2E1A;
+    letter-spacing: 2px;
+    text-transform: uppercase;
 }
 
-/* Sidebar inputs */
-[data-testid="stSidebar"] .stNumberInput input {
-    background-color: #040E19 !important;
-    color: var(--accent-blue) !important;
-    border: 1px solid var(--border);
-    border-radius: 4px;
+/* ═══════════════════════════
+   STREAMLIT INPUT OVERRIDES
+═══════════════════════════ */
+[data-testid="stTextInput"] input {
+    background: transparent !important;
+    border: none !important;
+    border-bottom: 2px solid #B8B0A8 !important;
+    border-radius: 0 !important;
+    color: #1A1A18 !important;
+    font-family: 'DM Mono', monospace !important;
+    font-style: italic !important;
+    font-size: 22px !important;
+    font-weight: 300 !important;
+    padding: 4px 2px 8px !important;
+    letter-spacing: 0.5px !important;
+    box-shadow: none !important;
+    outline: none !important;
+    transition: border-color 0.2s !important;
 }
-[data-testid="stSidebar"] label {
-    color: var(--text-label) !important;
+[data-testid="stTextInput"] input:focus {
+    border-bottom-color: #C0392B !important;
+    box-shadow: 0 2px 0 0 rgba(192,57,43,0.12) !important;
+}
+[data-testid="stTextInput"] input::placeholder {
+    color: #C0B8B0 !important;
+    font-size: 13px !important;
+    font-style: italic !important;
+}
+[data-testid="stTextInput"] label { display: none !important; }
+[data-testid="stTextInput"] > div,
+[data-testid="stTextInput"] > div > div {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+
+/* ═══════════════════════════
+   CALCULATE BUTTON — pill
+═══════════════════════════ */
+.stButton > button {
+    background: #C0392B !important;
+    color: #F8F4EE !important;
+    font-family: 'Playfair Display', serif !important;
+    font-style: italic !important;
+    font-weight: 700 !important;
+    font-size: 17px !important;
+    letter-spacing: 1.5px !important;
+    border: none !important;
+    border-radius: 9999px !important;
+    padding: 18px 56px !important;
+    width: 100% !important;
+    margin-top: 24px !important;
+    cursor: pointer !important;
+    box-shadow: 0 6px 20px rgba(192,57,43,0.28) !important;
+    transition: background 0.2s, box-shadow 0.2s, transform 0.15s !important;
+}
+.stButton > button:hover {
+    background: #A93226 !important;
+    box-shadow: 0 10px 28px rgba(192,57,43,0.38) !important;
+    transform: translateY(-2px) !important;
+}
+
+/* ═══════════════════════════
+   RESULTS HEADER BAND
+═══════════════════════════ */
+.res-band {
+    background: #1A2E1A;
+    padding: 16px 24px;
+    border-radius: 4px 4px 0 0;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.res-band-txt {
+    font-family: 'Cormorant Garamond', serif;
+    font-style: italic;
+    font-weight: 300;
+    font-size: 11px;
+    letter-spacing: 6px;
+    color: #6B9E6B;
+    text-transform: uppercase;
+}
+
+/* ═══════════════════════════
+   DATAFRAME CONTAINER WRAP
+═══════════════════════════ */
+.df-wrap {
+    border: 1px solid #D4CECC;
+    border-top: none;
+    border-radius: 0;
+    overflow: hidden;
+    background: #F8F4EE;
+}
+
+/* ═══════════════════════════
+   COST STRIP
+═══════════════════════════ */
+.cost-strip {
+    background: #C0392B;
+    padding: 26px 30px;
+    border-radius: 0 0 4px 4px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+.cost-lhs-label {
+    font-family: 'Cormorant Garamond', serif;
+    font-style: italic;
+    font-weight: 300;
+    font-size: 11px;
+    letter-spacing: 5px;
+    color: rgba(238,233,224,0.65);
+    text-transform: uppercase;
+    margin-bottom: 5px;
+}
+.cost-lhs-note {
+    font-family: 'DM Mono', monospace;
+    font-style: italic;
+    font-size: 11px;
+    color: rgba(238,233,224,0.45);
+    letter-spacing: 1px;
+}
+.cost-figure {
+    font-family: 'Playfair Display', serif;
+    font-style: italic;
+    font-weight: 700;
+    font-size: 50px;
+    color: #EEE9E0;
+    line-height: 1;
+    letter-spacing: -2px;
+    text-shadow: 0 2px 16px rgba(0,0,0,0.2);
+}
+
+/* ═══════════════════════════
+   COPY HINT + TIMESTAMP
+═══════════════════════════ */
+.copy-hint {
+    font-family: 'DM Mono', monospace;
+    font-style: italic;
+    font-size: 9px;
+    letter-spacing: 3px;
+    color: #A09888;
+    text-transform: uppercase;
+    text-align: right;
+    margin-bottom: 6px;
+}
+.ts-line {
+    font-family: 'DM Mono', monospace;
+    font-style: italic;
+    font-size: 9px;
+    letter-spacing: 3px;
+    color: #8A8078;
+    text-align: right;
+    margin-top: 10px;
+    text-transform: uppercase;
+}
+
+/* ═══════════════════════════
+   ERROR
+═══════════════════════════ */
+.err-shell {
+    background: #FDF0EE;
+    border: 1px solid #E8C0BC;
+    border-left: 5px solid #C0392B;
+    border-radius: 3px;
+    padding: 18px 24px;
+    margin-top: 18px;
+}
+.err-item {
+    font-family: 'Lora', serif;
+    font-style: italic;
+    font-size: 13px;
+    color: #C0392B;
+    line-height: 2.4;
 }
 </style>
 """, unsafe_allow_html=True)
 
-# ─────────────────────────────────────────────────────────────
-#  UNIT CONVERSION FUNCTIONS
-# ─────────────────────────────────────────────────────────────
-def length_to_m(value, unit):
-    to_m = {
-        "m": 1.0, "cm": 0.01, "mm": 0.001, "ft": 0.3048, "inch": 0.0254
-    }
-    return value * to_m.get(unit, 1.0)
 
-def area_to_m2(value, unit):
-    to_m2 = {
-        "m²": 1.0, "cm²": 0.0001, "ha": 10000.0, "ft²": 0.092903, "ac": 4046.86
-    }
-    return value * to_m2.get(unit, 1.0)
+# ── BACKEND ──────────────────────────────────────────────────
 
-def density_to_tpm3(value, unit):
-    to_tpm3 = {
-        "t/m³": 1.0, "kg/m³": 0.001, "g/cm³": 1.0, "lb/ft³": 0.0160185
-    }
-    return value * to_tpm3.get(unit, 1.0)
+def run_design(bench_height, hole_diameter, rock_density,
+               explosive_density, unit_cost, area):
+    burden    = 25 * hole_diameter * (1 / rock_density)
+    spacing   = 1.25 * burden
+    holes     = max(1, int(area / (burden * spacing)))
+    radius    = hole_diameter / 2
+    charge    = math.pi * (radius ** 2) * bench_height * explosive_density
+    total_exp = charge * holes
+    rock_vol  = area * bench_height
+    pf        = total_exp / rock_vol
+    cost      = total_exp * unit_cost
+    return dict(burden=burden, spacing=spacing, holes=holes, charge=charge,
+                total_exp=total_exp, rock_vol=rock_vol, pf=pf, cost=cost)
 
-def cost_to_dollar_per_tonne(value, unit):
-    to_dpt = {
-        "$/t": 1.0, "$/kg": 1000.0
-    }
-    return value * to_dpt.get(unit, 1.0)
 
-# ─────────────────────────────────────────────────────────────
-#  CALCULATION ENGINE (Konya & Walter for burden)
-# ─────────────────────────────────────────────────────────────
-def run_design(bench_height_m, hole_diameter_m, rock_density_tpm3,
-               explosive_density_tpm3, unit_cost_dpt, area_m2, spacing_ratio=1.3):
-    """
-    Blast design using Konya & Walter formula for burden.
-    All inputs in SI base units: m, t/m³, $/t.
-    Returns None if any required input is invalid.
-    """
-    # Input validation
-    if any(v <= 0 for v in [rock_density_tpm3, bench_height_m,
-                             hole_diameter_m, area_m2, explosive_density_tpm3]):
-        return None
-    
-    # Convert hole diameter from meters to mm for Konya & Walter formula
-    D_mm = hole_diameter_m * 1000.0
-    
-    # Konya & Walter Burden Formula (Result in meters)
-    # B = 0.012 * [ (2*ρe/ρr) + 1.5 ] * D_mm
-    ratio = (2.0 * explosive_density_tpm3) / rock_density_tpm3
-    burden_m = 0.012 * (ratio + 1.5) * D_mm
-    
-    # Spacing: S = m * B (user-defined spacing ratio)
-    spacing_m = spacing_ratio * burden_m
-    
-    # Number of holes (ceil to ensure coverage)
-    holes = max(1, math.ceil(area_m2 / (burden_m * spacing_m)))
-    
-    # Explosive charge per hole (full column, no stemming/subdrill deduction)
-    hole_radius_m = hole_diameter_m / 2.0
-    hole_volume_m3 = math.pi * (hole_radius_m ** 2) * bench_height_m
-    charge_per_hole_t = hole_volume_m3 * explosive_density_tpm3
-    
-    # Totals
-    total_exp_t = charge_per_hole_t * holes
-    rock_vol_m3 = area_m2 * bench_height_m
-    powder_factor_tpm3 = total_exp_t / rock_vol_m3
-    total_cost_usd = total_exp_t * unit_cost_dpt
-    
-    return {
-        "burden_m": burden_m,
-        "spacing_m": spacing_m,
-        "holes": holes,
-        "charge_t": charge_per_hole_t,
-        "total_exp_t": total_exp_t,
-        "rock_vol_m3": rock_vol_m3,
-        "pf_tpm3": powder_factor_tpm3,
-        "cost_usd": total_cost_usd,
-    }
+# ── MASTHEAD ─────────────────────────────────────────────────
 
-# ─────────────────────────────────────────────────────────────
-#  SIDEBAR – INPUTS WITH INLINE UNITS (all start at 0)
-# ─────────────────────────────────────────────────────────────
-with st.sidebar:
-    st.markdown("### ⬇️ INPUT PARAMETERS")
-    
-    # Rock Density
-    col1, col2 = st.columns([2, 1])
-    with col1:
-        rd_val = st.number_input("Rock Density", min_value=0.0, value=0.0, step=0.1, format="%.2f", key="rd")
-    with col2:
-        rd_unit = st.selectbox("Unit", ["t/m³", "kg/m³", "g/cm³", "lb/ft³"], index=0, key="rd_u")
-    
-    # Bench Height
-    col1, col2 = st.columns([2, 1])
-    with col1:
-        bh_val = st.number_input("Bench Height", min_value=0.0, value=0.0, step=0.5, format="%.2f", key="bh")
-    with col2:
-        bh_unit = st.selectbox("Unit", ["m", "cm", "mm", "ft", "inch"], index=0, key="bh_u")
-    
-    # Hole Diameter
-    col1, col2 = st.columns([2, 1])
-    with col1:
-        hd_val = st.number_input("Hole Diameter", min_value=0.0, value=0.0, step=0.005, format="%.4f", key="hd")
-    with col2:
-        hd_unit = st.selectbox("Unit", ["m", "cm", "mm", "ft", "inch"], index=0, key="hd_u")
-    
-    # Explosive Density
-    col1, col2 = st.columns([2, 1])
-    with col1:
-        ed_val = st.number_input("Explosive Density", min_value=0.0, value=0.0, step=0.05, format="%.2f", key="ed")
-    with col2:
-        ed_unit = st.selectbox("Unit", ["t/m³", "kg/m³", "g/cm³", "lb/ft³"], index=0, key="ed_u")
-    
-    # Bench Area
-    col1, col2 = st.columns([2, 1])
-    with col1:
-        area_val = st.number_input("Bench Area", min_value=0.0, value=0.0, step=100.0, format="%.1f", key="area")
-    with col2:
-        area_unit = st.selectbox("Unit", ["m²", "cm²", "ha", "ft²", "ac"], index=0, key="area_u")
-    
-    # Unit Cost
-    col1, col2 = st.columns([2, 1])
-    with col1:
-        cost_val = st.number_input("Unit Cost", min_value=0.0, value=0.0, step=10.0, format="%.2f", key="cost")
-    with col2:
-        cost_unit = st.selectbox("Unit", ["$/t", "$/kg"], index=0, key="cost_u")
-    
-    # Spacing Ratio (new)
-    col1, col2 = st.columns([2, 1])
-    with col1:
-        spacing_ratio = st.number_input("Spacing Ratio (S/B)", min_value=1.0, max_value=2.0,
-                                        value=1.3, step=0.05, format="%.2f",
-                                        help="Ratio of spacing to burden (typical: 1.0–1.5)")
-    with col2:
-        st.markdown("")  # Placeholder for alignment
-    
-    run_btn = st.button("CALCULATE", use_container_width=True)
+st.markdown("""
+<div class="masthead">
+    <div class="mh-eyebrow">💣 &nbsp; Open-Pit Mining</div>
+    <div class="mh-title">Blast Design &amp;<br><em>Cost Estimation</em></div>
+    <div class="mh-desc">Drill &amp; Blast Engineering &nbsp;·&nbsp; Bench Analysis Tool</div>
+</div>
+""", unsafe_allow_html=True)
 
-# ─────────────────────────────────────────────────────────────
-#  PROCESS CALCULATION
-# ─────────────────────────────────────────────────────────────
-if run_btn:
-    # Convert all inputs to SI units
-    rock_density_tpm3 = density_to_tpm3(rd_val, rd_unit)
-    bench_height_m = length_to_m(bh_val, bh_unit)
-    hole_diameter_m = length_to_m(hd_val, hd_unit)
-    explosive_density_tpm3 = density_to_tpm3(ed_val, ed_unit)
-    area_m2 = area_to_m2(area_val, area_unit)
-    unit_cost_dpt = cost_to_dollar_per_tonne(cost_val, cost_unit)
-    
-    results = run_design(bench_height_m, hole_diameter_m, rock_density_tpm3,
-                         explosive_density_tpm3, unit_cost_dpt, area_m2, spacing_ratio)
-    
-    if results is None:
-        st.error("❌ Please enter positive values for all inputs (Rock Density, Bench Height, Hole Diameter, Explosive Density, Bench Area).")
-        st.session_state.pop("results", None)
-        st.session_state.pop("inputs_si", None)
+
+# ── INPUTS ───────────────────────────────────────────────────
+
+st.markdown("""
+<div style="padding: 44px 72px 0;">
+    <div class="sec-rule">
+        <span class="sec-rule-icon">⚙️</span>
+        <span class="sec-rule-txt">Input Parameters</span>
+        <span class="sec-rule-line"></span>
+    </div>
+</div>
+""", unsafe_allow_html=True)
+
+col_l, col_r = st.columns([1, 20])   # left spacer
+with col_r:
+    pad_l, c1, c2, c3, pad_r = st.columns([1, 6, 6, 6, 1])
+
+    with c1:
+        st.markdown('<div class="inp-card"><div class="inp-card-header"><span class="inp-card-icon">📏</span><span class="inp-card-label">Bench Height (m)</span></div></div>', unsafe_allow_html=True)
+        t_bench = st.text_input("bh", value="10.0", placeholder="e.g. 10.0", label_visibility="hidden", key="bench")
+
+        st.markdown('<div class="inp-card"><div class="inp-card-header"><span class="inp-card-icon">🕳️</span><span class="inp-card-label">Hole Diameter (m)</span></div></div>', unsafe_allow_html=True)
+        t_hole = st.text_input("hd", value="0.115", placeholder="e.g. 0.115", label_visibility="hidden", key="hole")
+
+    with c2:
+        st.markdown('<div class="inp-card"><div class="inp-card-header"><span class="inp-card-icon">🪨</span><span class="inp-card-label">Rock Density (t/m³)</span></div></div>', unsafe_allow_html=True)
+        t_rock = st.text_input("rd", value="2.7", placeholder="e.g. 2.7", label_visibility="hidden", key="rock")
+
+        st.markdown('<div class="inp-card"><div class="inp-card-header"><span class="inp-card-icon">💥</span><span class="inp-card-label">Explosive Density (t/m³)</span></div></div>', unsafe_allow_html=True)
+        t_expden = st.text_input("ed", value="0.85", placeholder="e.g. 0.85", label_visibility="hidden", key="expden")
+
+    with c3:
+        st.markdown('<div class="inp-card"><div class="inp-card-header"><span class="inp-card-icon">📐</span><span class="inp-card-label">Bench Area (m²)</span></div></div>', unsafe_allow_html=True)
+        t_area = st.text_input("ba", value="5000", placeholder="e.g. 5000", label_visibility="hidden", key="area")
+
+        st.markdown('<div class="inp-card"><div class="inp-card-header"><span class="inp-card-icon">💰</span><span class="inp-card-label">Unit Cost ($/t)</span></div></div>', unsafe_allow_html=True)
+        t_cost = st.text_input("uc", value="450", placeholder="e.g. 450", label_visibility="hidden", key="cost")
+
+
+# ── BUTTON ───────────────────────────────────────────────────
+
+_, btn_mid, _ = st.columns([3, 4, 3])
+with btn_mid:
+    st.markdown('<div style="padding: 0 20px;">', unsafe_allow_html=True)
+    run = st.button("Estimate Cost")
+    st.markdown('</div>', unsafe_allow_html=True)
+
+
+# ── CALCULATE ────────────────────────────────────────────────
+
+if run:
+    errors = []
+
+    def parse(val, name):
+        try:
+            v = float(val)
+            if v <= 0:
+                errors.append(f"{name} — must be greater than zero")
+            return v
+        except ValueError:
+            errors.append(f"{name} — please enter a valid number")
+            return None
+
+    bench_height      = parse(t_bench,  "Bench Height")
+    hole_diameter     = parse(t_hole,   "Hole Diameter")
+    rock_density      = parse(t_rock,   "Rock Density")
+    explosive_density = parse(t_expden, "Explosive Density")
+    area              = parse(t_area,   "Bench Area")
+    unit_cost         = parse(t_cost,   "Unit Cost")
+
+    if errors:
+        items = "".join(f'<div class="err-item">▶ &nbsp;{e}</div>' for e in errors)
+        st.markdown(
+            f'<div style="padding:0 72px;"><div class="err-shell">{items}</div></div>',
+            unsafe_allow_html=True
+        )
     else:
-        st.session_state["results"] = results
-        st.session_state["inputs_si"] = {
-            "Rock Density (t/m³)": rock_density_tpm3,
-            "Bench Height (m)": bench_height_m,
-            "Hole Diameter (m)": hole_diameter_m,
-            "Explosive Density (t/m³)": explosive_density_tpm3,
-            "Bench Area (m²)": area_m2,
-            "Unit Cost ($/t)": unit_cost_dpt,
-            "Spacing Ratio": spacing_ratio,
-        }
+        res = run_design(bench_height, hole_diameter, rock_density,
+                         explosive_density, unit_cost, area)
+        st.session_state["res"] = res
+        st.session_state["inp"] = dict(
+            bench_height=bench_height, hole_diameter=hole_diameter,
+            rock_density=rock_density, explosive_density=explosive_density,
+            unit_cost=unit_cost, area=area
+        )
+        st.session_state["ts"] = datetime.now().strftime("%d %b %Y  —  %H:%M:%S")
 
-# Display results if available
-if "results" in st.session_state:
-    res = st.session_state["results"]
-    ins = st.session_state["inputs_si"]
-    
-    # Vertical stack: INPUTS → RESULTS → Cost → Download
-    st.subheader("📋 INPUTS")
-    input_df = pd.DataFrame({
-        "Parameter": list(ins.keys()),
-        "Value": [f"{v:.4f}" if isinstance(v, float) else v for v in ins.values()]
-    })
-    st.table(input_df)
-    
-    st.subheader("📊 RESULTS")
-    result_items = [
-        ("Burden (m)", res["burden_m"]),
-        ("Spacing (m)", res["spacing_m"]),
-        ("Number of Holes", res["holes"]),
-        ("Charge per Hole (t)", res["charge_t"]),
-        ("Total Explosive (t)", res["total_exp_t"]),
-        ("Rock Volume (m³)", res["rock_vol_m3"]),
-        ("Powder Factor (t/m³)", res["pf_tpm3"]),
-        ("Powder Factor (kg/m³)", res["pf_tpm3"] * 1000.0),
-    ]
-    result_df = pd.DataFrame({
-        "Parameter": [item[0] for item in result_items],
-        "Value": [f"{item[1]:.4f}" if isinstance(item[1], float) else item[1] for item in result_items]
-    })
-    st.table(result_df)
-    
-    # Cost block
-    st.markdown(f"""
-    <div class="cost-block">
-        <div class="cost-label">Total Blasting Cost</div>
-        <div class="cost-value">${res['cost_usd']:,.2f}</div>
-        <div class="cost-sub">
-            Based on {res['total_exp_t']:.3f} t explosive × ${ins['Unit Cost ($/t)']:.2f}/t
+
+# ── OUTPUTS ──────────────────────────────────────────────────
+
+if "res" in st.session_state:
+    res = st.session_state["res"]
+    inp = st.session_state["inp"]
+    ts  = st.session_state["ts"]
+
+    st.markdown("""
+    <div style="padding: 44px 72px 0;">
+        <div class="sec-rule">
+            <span class="sec-rule-icon">📊</span>
+            <span class="sec-rule-txt">Results</span>
+            <span class="sec-rule-line"></span>
         </div>
     </div>
     """, unsafe_allow_html=True)
-    
-    # Download TXT report
-    def txt_report():
-        return f"""
-BLAST DESIGN REPORT
-{datetime.now().strftime("%d %B %Y %H:%M:%S")}
 
-=== INPUTS ===
-{chr(10).join([f"{k}: {v:.4f}" if isinstance(v, float) else f"{k}: {v}" for k, v in ins.items()])}
+    # Header band above table
+    st.markdown("""
+    <div style="padding: 0 72px 0;">
+        <div class="res-band">
+            <span style="font-size:14px;">🔩</span>
+            <span class="res-band-txt">Computed output — drill &amp; blast parameters</span>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
 
-=== RESULTS ===
-Burden               : {res['burden_m']:.3f} m
-Spacing              : {res['spacing_m']:.3f} m
-Number of Holes      : {res['holes']}
-Charge per Hole      : {res['charge_t']:.4f} t
-Total Explosive      : {res['total_exp_t']:.3f} t
-Rock Volume          : {res['rock_vol_m3']:.2f} m³
-Powder Factor        : {res['pf_tpm3']:.4f} t/m³  ( {res['pf_tpm3']*1000:.2f} kg/m³ )
-Total Cost           : ${res['cost_usd']:,.2f}
-"""
-    
-    st.markdown("---")
-    st.download_button(
-        "📥 Download Report (TXT)",
-        txt_report(),
-        file_name=f"BlastDesign_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
-    )
-else:
-    # Show a message only if no calculation has been performed yet (not after an error)
-    if not run_btn:
-        st.info("👈 Enter your parameters in the sidebar and click **CALCULATE** to see results.")
+    # Build DataFrame
+    df = pd.DataFrame({
+        "Parameter": [
+            "Burden",
+            "Hole Spacing",
+            "Number of Drill Holes",
+            "Charge per Hole",
+            "Total Explosive",
+            "Rock Volume",
+            "Powder Factor",
+        ],
+        "Value": [
+            f"{res['burden']:.3f}",
+            f"{res['spacing']:.3f}",
+            f"{res['holes']}",
+            f"{res['charge']:.4f}",
+            f"{res['total_exp']:.3f}",
+            f"{res['rock_vol']:.2f}",
+            f"{res['pf']:.4f}",
+        ],
+        "Unit": ["m", "m", "holes", "t", "t", "m³", "t/m³"]
+    })
 
-# ─────────────────────────────────────────────────────────────
-#  OPTIONAL UNIT CONVERTER (expandable)
-# ─────────────────────────────────────────────────────────────
-with st.expander("🔄 Quick Unit Converter (optional)"):
-    conv_type = st.selectbox("Conversion type", ["Length", "Area", "Density", "Cost"])
-    val = st.number_input("Value", value=1.0, key="conv_val")
-    if conv_type == "Length":
-        from_u = st.selectbox("From", ["m", "cm", "mm", "ft", "inch"])
-        to_u = st.selectbox("To", ["m", "cm", "mm", "ft", "inch"], index=1)
-        result = length_to_m(val, from_u)
-        result = result * {"m":1, "cm":100, "mm":1000, "ft":3.28084, "inch":39.3701}[to_u]
-    elif conv_type == "Area":
-        from_u = st.selectbox("From", ["m²", "cm²", "ha", "ft²", "ac"])
-        to_u = st.selectbox("To", ["m²", "cm²", "ha", "ft²", "ac"])
-        result = area_to_m2(val, from_u)
-        result = result / {"m²":1, "cm²":0.0001, "ha":10000, "ft²":0.092903, "ac":4046.86}[to_u]
-    elif conv_type == "Density":
-        from_u = st.selectbox("From", ["t/m³", "kg/m³", "g/cm³", "lb/ft³"])
-        to_u = st.selectbox("To", ["t/m³", "kg/m³", "g/cm³", "lb/ft³"])
-        result = density_to_tpm3(val, from_u)
-        result = result / {"t/m³":1, "kg/m³":0.001, "g/cm³":1, "lb/ft³":0.0160185}[to_u]
-    else:  # Cost
-        from_u = st.selectbox("From", ["$/t", "$/kg"])
-        to_u = st.selectbox("To", ["$/t", "$/kg"])
-        result = cost_to_dollar_per_tonne(val, from_u)
-        result = result / {"$/t":1, "$/kg":1000}[to_u]
-    st.success(f"Result: {result:.6f} {to_u}")
+    # Copy hint
+    st.markdown('<div style="padding: 0 72px;"><div class="copy-hint">click any cell · select all · ctrl+c to copy</div></div>',
+                unsafe_allow_html=True)
+
+    # Render the table inside padded container using columns
+    _, tbl, _ = st.columns([1, 18, 1])
+    with tbl:
+        st.dataframe(
+            df,
+            use_container_width=True,
+            hide_index=True,
+            height=280,
+            column_config={
+                "Parameter": st.column_config.TextColumn("Parameter", width="large"),
+                "Value":     st.column_config.TextColumn("Value",     width="medium"),
+                "Unit":      st.column_config.TextColumn("Unit",      width="small"),
+            }
+        )
+
+    # Cost strip
+    st.markdown(f"""
+    <div style="padding: 0 72px;">
+        <div class="cost-strip">
+            <div>
+                <div class="cost-lhs-label">Total Blasting Cost — Bench Estimate</div>
+                <div class="cost-lhs-note">
+                    {res['total_exp']:.3f} t &nbsp;×&nbsp; ${inp['unit_cost']:.2f} per tonne
+                </div>
+            </div>
+            <div class="cost-figure">${res['cost']:,.2f}</div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.markdown(f'<div style="padding: 4px 72px;"><div class="ts-line">Calculated: {ts}</div></div>',
+                unsafe_allow_html=True)
+
+    st.markdown('<div style="height:64px;"></div>', unsafe_allow_html=True)
