@@ -14,12 +14,12 @@ st.set_page_config(
 )
 
 # ─────────────────────────────────────────────────────────────
-#  GLOBAL CSS
+#  GLOBAL CSS (unchanged)
 # ─────────────────────────────────────────────────────────────
-st.markdown("""<style> ... </style>""", unsafe_allow_html=True)  # keep your CSS unchanged
+st.markdown("""<style> ... </style>""", unsafe_allow_html=True)
 
 # ─────────────────────────────────────────────────────────────
-#  BACKEND FUNCTIONS (original + new)
+#  BACKEND FUNCTIONS
 # ─────────────────────────────────────────────────────────────
 def calc_burden(diameter: float, rock_density: float) -> float:
     return 25 * diameter * (1 / rock_density)
@@ -170,4 +170,5 @@ cost_data = pd.DataFrame([
     ("Explosive Cost", f"${results['explosive_cost']:,.2f}"),
     ("Drilling Cost", f"${results['drilling_cost']:,.2f}"),
     ("Initiation Cost", f"${results['initiation_cost']:,.2f}"),
-    ("Total Cost", f"${results['cost']:
+    ("Total Cost", f"${results['cost']:,.2f}"),
+], columns=["
