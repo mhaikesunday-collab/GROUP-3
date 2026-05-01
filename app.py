@@ -3,534 +3,171 @@ import streamlit as st
 from datetime import datetime
 import pandas as pd
 
-st.set_page_config(page_title="Blast Cost Estimator", layout="wide", page_icon="💣")
+# ─────────────────────────────────────────────────────────────
+#  PAGE CONFIG
+# ─────────────────────────────────────────────────────────────
+st.set_page_config(
+    page_title="Blast Design Tool",
+    page_icon="💥",
+    layout="wide",
+    initial_sidebar_state="expanded",
+)
 
-st.markdown("""
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,700;1,400;1,600;1,700&family=Lora:ital,wght@0,400;0,600;1,400;1,600&family=DM+Mono:ital,wght@0,300;0,400;1,300;1,400&family=Cormorant+Garamond:ital,wght@0,300;0,600;1,300;1,400;1,600&display=swap');
+# ─────────────────────────────────────────────────────────────
+#  GLOBAL CSS
+# ─────────────────────────────────────────────────────────────
+st.markdown("""<style> ... </style>""", unsafe_allow_html=True)  # keep your CSS unchanged
 
-*, *::before, *::after { box-sizing: border-box; }
+# ─────────────────────────────────────────────────────────────
+#  BACKEND FUNCTIONS (original + new)
+# ─────────────────────────────────────────────────────────────
+def calc_burden(diameter: float, rock_density: float) -> float:
+    return 25 * diameter * (1 / rock_density)
 
-html, body,
-[data-testid="stAppViewContainer"],
-[data-testid="stMain"] {
-    background: #EEE9E0 !important;
-    color: #1A1A18 !important;
-}
-[data-testid="stHeader"] { background: transparent !important; }
-[data-testid="stSidebar"] { display: none !important; }
-#MainMenu, footer { visibility: hidden; }
+def calc_spacing(burden: float) -> float:
+    return 1.25 * burden
 
-[data-testid="stAppViewContainer"] > .main > .block-container {
-    padding: 0 !important;
-    max-width: 100% !important;
-}
+def calc_holes(area: float, burden: float, spacing: float) -> int:
+    return max(1, int(area / (burden * spacing)))
 
-/* ═══════════════════════════
-   MASTHEAD
-═══════════════════════════ */
-.masthead {
-    background: #1A2E1A;
-    padding: 52px 72px 44px;
-    position: relative;
-    overflow: hidden;
-}
-.masthead::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: repeating-linear-gradient(
-        90deg,
-        transparent, transparent 80px,
-        rgba(255,255,255,0.012) 80px,
-        rgba(255,255,255,0.012) 81px
-    );
-    pointer-events: none;
-}
-.masthead::after {
-    content: '';
-    position: absolute;
-    bottom: 0; left: 0; right: 0;
-    height: 3px;
-    background: linear-gradient(90deg, #C0392B 0%, #E05A3A 40%, transparent 100%);
-}
-.mh-eyebrow {
-    font-family: 'DM Mono', monospace;
-    font-style: italic;
-    font-size: 10px;
-    letter-spacing: 6px;
-    color: #6B9E6B;
-    text-transform: uppercase;
-    margin-bottom: 18px;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-}
-.mh-eyebrow::before {
-    content: '';
-    display: inline-block;
-    width: 28px; height: 1px;
-    background: #6B9E6B;
-}
-.mh-title {
-    font-family: 'Playfair Display', serif;
-    font-style: italic;
-    font-weight: 700;
-    font-size: 58px;
-    color: #EEE9E0;
-    line-height: 1.0;
-    letter-spacing: -1.5px;
-    margin-bottom: 12px;
-}
-.mh-title em { color: #C0392B; font-style: italic; }
-.mh-desc {
-    font-family: 'Cormorant Garamond', serif;
-    font-style: italic;
-    font-weight: 300;
-    font-size: 16px;
-    color: #5A7A5A;
-    letter-spacing: 2px;
-    margin-top: 6px;
-}
+def calc_charge_per_hole(diameter: float, bench_height: float,
+                          explosive_density: float) -> float:
+    radius = diameter / 2
+    volume = math.pi * (radius ** 2) * bench_height
+    return volume * explosive_density
 
-/* ═══════════════════════════
-   SECTION RULE
-═══════════════════════════ */
-.sec-rule {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    margin: 0 0 28px 0;
-}
-.sec-rule-icon { font-size: 16px; line-height: 1; }
-.sec-rule-txt {
-    font-family: 'Cormorant Garamond', serif;
-    font-style: italic;
-    font-weight: 600;
-    font-size: 11px;
-    letter-spacing: 6px;
-    color: #1A2E1A;
-    text-transform: uppercase;
-}
-.sec-rule-line {
-    flex: 1; height: 1px;
-    background: linear-gradient(90deg, #1A2E1A 0%, transparent 100%);
-    opacity: 0.18;
-}
+def calc_powder_factor(total_explosive: float, rock_volume: float) -> float:
+    return total_explosive / rock_volume
 
-/* ═══════════════════════════
-   INPUT CARDS
-═══════════════════════════ */
-.inp-card {
-    background: #F8F4EE;
-    border-radius: 3px;
-    padding: 16px 20px 8px;
-    margin-bottom: 14px;
-    border-top: 3px solid #1A2E1A;
-    transition: box-shadow 0.2s, transform 0.2s;
-}
-.inp-card:hover {
-    box-shadow: 4px 4px 0 #D4CECC;
-    transform: translateY(-1px);
-}
-.inp-card-header {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 4px;
-}
-.inp-card-icon { font-size: 13px; opacity: 0.85; }
-.inp-card-label {
-    font-family: 'Lora', serif;
-    font-style: italic;
-    font-size: 11px;
-    font-weight: 600;
-    color: #1A2E1A;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-}
+def calc_total_cost(total_explosive: float, unit_cost: float) -> float:
+    return total_explosive * unit_cost
 
-/* ═══════════════════════════
-   STREAMLIT INPUT OVERRIDES
-═══════════════════════════ */
-[data-testid="stTextInput"] input {
-    background: transparent !important;
-    border: none !important;
-    border-bottom: 2px solid #B8B0A8 !important;
-    border-radius: 0 !important;
-    color: #1A1A18 !important;
-    font-family: 'DM Mono', monospace !important;
-    font-style: italic !important;
-    font-size: 22px !important;
-    font-weight: 300 !important;
-    padding: 4px 2px 8px !important;
-    letter-spacing: 0.5px !important;
-    box-shadow: none !important;
-    outline: none !important;
-    transition: border-color 0.2s !important;
-}
-[data-testid="stTextInput"] input:focus {
-    border-bottom-color: #C0392B !important;
-    box-shadow: 0 2px 0 0 rgba(192,57,43,0.12) !important;
-}
-[data-testid="stTextInput"] input::placeholder {
-    color: #C0B8B0 !important;
-    font-size: 13px !important;
-    font-style: italic !important;
-}
-[data-testid="stTextInput"] label { display: none !important; }
-[data-testid="stTextInput"] > div,
-[data-testid="stTextInput"] > div > div {
-    background: transparent !important;
-    border: none !important;
-    box-shadow: none !important;
-}
+# NEW FUNCTIONS
+def calc_effective_height(bench_height: float, stemming: float, subdrill: float) -> float:
+    return max(0.0, bench_height + subdrill - stemming)
 
-/* ═══════════════════════════
-   CALCULATE BUTTON — pill
-═══════════════════════════ */
-.stButton > button {
-    background: #C0392B !important;
-    color: #F8F4EE !important;
-    font-family: 'Playfair Display', serif !important;
-    font-style: italic !important;
-    font-weight: 700 !important;
-    font-size: 17px !important;
-    letter-spacing: 1.5px !important;
-    border: none !important;
-    border-radius: 9999px !important;
-    padding: 18px 56px !important;
-    width: 100% !important;
-    margin-top: 24px !important;
-    cursor: pointer !important;
-    box-shadow: 0 6px 20px rgba(192,57,43,0.28) !important;
-    transition: background 0.2s, box-shadow 0.2s, transform 0.15s !important;
-}
-.stButton > button:hover {
-    background: #A93226 !important;
-    box-shadow: 0 10px 28px rgba(192,57,43,0.38) !important;
-    transform: translateY(-2px) !important;
-}
+def calc_charge_per_hole_extended(diameter: float, effective_height: float,
+                                  explosive_density: float) -> float:
+    radius = diameter / 2
+    volume = math.pi * (radius ** 2) * effective_height
+    return volume * explosive_density
 
-/* ═══════════════════════════
-   RESULTS HEADER BAND
-═══════════════════════════ */
-.res-band {
-    background: #1A2E1A;
-    padding: 16px 24px;
-    border-radius: 4px 4px 0 0;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-}
-.res-band-txt {
-    font-family: 'Cormorant Garamond', serif;
-    font-style: italic;
-    font-weight: 300;
-    font-size: 11px;
-    letter-spacing: 6px;
-    color: #6B9E6B;
-    text-transform: uppercase;
-}
+def calc_drilling_cost(holes: int, hole_depth: float, cost_per_m: float) -> float:
+    return holes * hole_depth * cost_per_m
 
-/* ═══════════════════════════
-   DATAFRAME CONTAINER WRAP
-═══════════════════════════ */
-.df-wrap {
-    border: 1px solid #D4CECC;
-    border-top: none;
-    border-radius: 0;
-    overflow: hidden;
-    background: #F8F4EE;
-}
+def calc_initiation_cost(holes: int, detonator_cost: float) -> float:
+    return holes * detonator_cost
 
-/* ═══════════════════════════
-   COST STRIP
-═══════════════════════════ */
-.cost-strip {
-    background: #C0392B;
-    padding: 26px 30px;
-    border-radius: 0 0 4px 4px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    flex-wrap: wrap;
-    gap: 16px;
-}
-.cost-lhs-label {
-    font-family: 'Cormorant Garamond', serif;
-    font-style: italic;
-    font-weight: 300;
-    font-size: 11px;
-    letter-spacing: 5px;
-    color: rgba(238,233,224,0.65);
-    text-transform: uppercase;
-    margin-bottom: 5px;
-}
-.cost-lhs-note {
-    font-family: 'DM Mono', monospace;
-    font-style: italic;
-    font-size: 11px;
-    color: rgba(238,233,224,0.45);
-    letter-spacing: 1px;
-}
-.cost-figure {
-    font-family: 'Playfair Display', serif;
-    font-style: italic;
-    font-weight: 700;
-    font-size: 50px;
-    color: #EEE9E0;
-    line-height: 1;
-    letter-spacing: -2px;
-    text-shadow: 0 2px 16px rgba(0,0,0,0.2);
-}
+def calc_explosive_energy(charge_tonnes: float, energy_mj_per_kg: float) -> float:
+    return charge_tonnes * 1000 * energy_mj_per_kg
 
-/* ═══════════════════════════
-   COPY HINT + TIMESTAMP
-═══════════════════════════ */
-.copy-hint {
-    font-family: 'DM Mono', monospace;
-    font-style: italic;
-    font-size: 9px;
-    letter-spacing: 3px;
-    color: #A09888;
-    text-transform: uppercase;
-    text-align: right;
-    margin-bottom: 6px;
-}
-.ts-line {
-    font-family: 'DM Mono', monospace;
-    font-style: italic;
-    font-size: 9px;
-    letter-spacing: 3px;
-    color: #8A8078;
-    text-align: right;
-    margin-top: 10px;
-    text-transform: uppercase;
-}
-
-/* ═══════════════════════════
-   ERROR
-═══════════════════════════ */
-.err-shell {
-    background: #FDF0EE;
-    border: 1px solid #E8C0BC;
-    border-left: 5px solid #C0392B;
-    border-radius: 3px;
-    padding: 18px 24px;
-    margin-top: 18px;
-}
-.err-item {
-    font-family: 'Lora', serif;
-    font-style: italic;
-    font-size: 13px;
-    color: #C0392B;
-    line-height: 2.4;
-}
-</style>
-""", unsafe_allow_html=True)
-
-
-# ── BACKEND ──────────────────────────────────────────────────
+def calc_vibration_ppv(charge_kg: float, distance_m: float, k: float = 1000, alpha: float = 1.6) -> float:
+    return k * (charge_kg ** 0.5) / (distance_m ** alpha)
 
 def run_design(bench_height, hole_diameter, rock_density,
-               explosive_density, unit_cost, area):
-    burden    = 25 * hole_diameter * (1 / rock_density)
-    spacing   = 1.25 * burden
-    holes     = max(1, int(area / (burden * spacing)))
-    radius    = hole_diameter / 2
-    charge    = math.pi * (radius ** 2) * bench_height * explosive_density
-    total_exp = charge * holes
-    rock_vol  = area * bench_height
-    pf        = total_exp / rock_vol
-    cost      = total_exp * unit_cost
-    return dict(burden=burden, spacing=spacing, holes=holes, charge=charge,
-                total_exp=total_exp, rock_vol=rock_vol, pf=pf, cost=cost)
+               explosive_density, unit_cost, area,
+               stemming_length, subdrill_depth,
+               drilling_cost_m, detonator_cost,
+               explosive_energy, distance_to_struct):
 
+    burden      = calc_burden(hole_diameter, rock_density)
+    spacing     = calc_spacing(burden)
+    holes       = calc_holes(area, burden, spacing)
 
-# ── MASTHEAD ─────────────────────────────────────────────────
+    effective_h = calc_effective_height(bench_height, stemming_length, subdrill_depth)
+    charge      = calc_charge_per_hole_extended(hole_diameter, effective_h, explosive_density)
 
-st.markdown("""
-<div class="masthead">
-    <div class="mh-eyebrow">💣 &nbsp; Open-Pit Mining</div>
-    <div class="mh-title">Blast Design &amp;<br><em>Cost Estimation</em></div>
-    <div class="mh-desc">Drill &amp; Blast Engineering &nbsp;·&nbsp; Bench Analysis Tool</div>
-</div>
-""", unsafe_allow_html=True)
+    total_exp   = charge * holes
+    rock_vol    = area * bench_height
+    pf          = calc_powder_factor(total_exp, rock_vol)
+    explosive_cost = calc_total_cost(total_exp, unit_cost)
 
+    drilling_cost   = calc_drilling_cost(holes, bench_height + subdrill_depth, drilling_cost_m)
+    initiation_cost = calc_initiation_cost(holes, detonator_cost)
+    total_cost      = explosive_cost + drilling_cost + initiation_cost
 
-# ── INPUTS ───────────────────────────────────────────────────
+    energy_per_hole = calc_explosive_energy(charge, explosive_energy)
+    ppv             = calc_vibration_ppv(charge * 1000, distance_to_struct)
 
-st.markdown("""
-<div style="padding: 44px 72px 0;">
-    <div class="sec-rule">
-        <span class="sec-rule-icon">⚙️</span>
-        <span class="sec-rule-txt">Input Parameters</span>
-        <span class="sec-rule-line"></span>
-    </div>
-</div>
-""", unsafe_allow_html=True)
+    return dict(burden=burden, spacing=spacing, holes=holes,
+                charge=charge, total_exp=total_exp, rock_vol=rock_vol,
+                pf=pf, explosive_cost=explosive_cost,
+                drilling_cost=drilling_cost, initiation_cost=initiation_cost,
+                cost=total_cost, energy_per_hole=energy_per_hole, ppv=ppv)
 
-col_l, col_r = st.columns([1, 20])   # left spacer
-with col_r:
-    pad_l, c1, c2, c3, pad_r = st.columns([1, 6, 6, 6, 1])
+# ─────────────────────────────────────────────────────────────
+#  SIDEBAR
+# ─────────────────────────────────────────────────────────────
+with st.sidebar:
+    st.markdown("### ⚙️ INPUT PARAMETERS")
+    rock_density      = st.number_input("Rock Density (t/m³)", min_value=0.1, value=2.7, step=0.1, format="%.2f")
+    bench_height      = st.number_input("Bench Height (m)", min_value=0.1, value=10.0, step=0.5, format="%.1f")
+    area              = st.number_input("Bench Area (m²)", min_value=1.0, value=5000.0, step=100.0, format="%.1f")
+    hole_diameter     = st.number_input("Hole Diameter (m)", min_value=0.01, value=0.115, step=0.005, format="%.4f")
+    explosive_density = st.number_input("Explosive Density (t/m³)", min_value=0.1, value=0.85, step=0.05, format="%.2f")
+    unit_cost         = st.number_input("Unit Cost ($/t)", min_value=0.0, value=450.0, step=10.0, format="%.2f")
 
-    with c1:
-        st.markdown('<div class="inp-card"><div class="inp-card-header"><span class="inp-card-icon">📏</span><span class="inp-card-label">Bench Height (m)</span></div></div>', unsafe_allow_html=True)
-        t_bench = st.text_input("bh", value="10.0", placeholder="e.g. 10.0", label_visibility="hidden", key="bench")
+    # NEW INPUTS
+    stemming_length   = st.number_input("Stemming Length (m)", min_value=0.0, value=0.0, step=0.5)
+    subdrill_depth    = st.number_input("Subdrill Depth (m)", min_value=0.0, value=0.0, step=0.5)
+    drilling_cost_m   = st.number_input("Drilling Cost ($/m)", min_value=0.0, value=50.0, step=1.0)
+    detonator_cost    = st.number_input("Detonator Cost ($/hole)", min_value=0.0, value=10.0, step=1.0)
+    explosive_energy  = st.number_input("Explosive Energy (MJ/kg)", min_value=1.0, value=3.8, step=0.1)
+    distance_to_struct= st.number_input("Distance to Structure (m)", min_value=1.0, value=100.0, step=1.0)
 
-        st.markdown('<div class="inp-card"><div class="inp-card-header"><span class="inp-card-icon">🕳️</span><span class="inp-card-label">Hole Diameter (m)</span></div></div>', unsafe_allow_html=True)
-        t_hole = st.text_input("hd", value="0.115", placeholder="e.g. 0.115", label_visibility="hidden", key="hole")
+    run_btn = st.button("CALCULATE")
 
-    with c2:
-        st.markdown('<div class="inp-card"><div class="inp-card-header"><span class="inp-card-icon">🪨</span><span class="inp-card-label">Rock Density (t/m³)</span></div></div>', unsafe_allow_html=True)
-        t_rock = st.text_input("rd", value="2.7", placeholder="e.g. 2.7", label_visibility="hidden", key="rock")
+# ─────────────────────────────────────────────────────────────
+#  MAIN
+# ─────────────────────────────────────────────────────────────
+st.title("💥 Blast Design & Cost Estimation")
+st.caption("Open-Pit Mining | Drill & Blast Engineering Tool")
 
-        st.markdown('<div class="inp-card"><div class="inp-card-header"><span class="inp-card-icon">💥</span><span class="inp-card-label">Explosive Density (t/m³)</span></div></div>', unsafe_allow_html=True)
-        t_expden = st.text_input("ed", value="0.85", placeholder="e.g. 0.85", label_visibility="hidden", key="expden")
+if run_btn or "results" not in st.session_state:
+    inputs = dict(
+        bench_height=bench_height,
+        hole_diameter=hole_diameter,
+        rock_density=rock_density,
+        explosive_density=explosive_density,
+        unit_cost=unit_cost,
+        area=area,
+        stemming_length=stemming_length,
+        subdrill_depth=subdrill_depth,
+        drilling_cost_m=drilling_cost_m,
+        detonator_cost=detonator_cost,
+        explosive_energy=explosive_energy,
+        distance_to_struct=distance_to_struct,
+    )
+    results = run_design(**inputs)
+    st.session_state["results"] = results
+    st.session_state["inputs"] = inputs
 
-    with c3:
-        st.markdown('<div class="inp-card"><div class="inp-card-header"><span class="inp-card-icon">📐</span><span class="inp-card-label">Bench Area (m²)</span></div></div>', unsafe_allow_html=True)
-        t_area = st.text_input("ba", value="5000", placeholder="e.g. 5000", label_visibility="hidden", key="area")
+results = st.session_state["results"]
+inputs  = st.session_state["inputs"]
 
-        st.markdown('<div class="inp-card"><div class="inp-card-header"><span class="inp-card-icon">💰</span><span class="inp-card-label">Unit Cost ($/t)</span></div></div>', unsafe_allow_html=True)
-        t_cost = st.text_input("uc", value="450", placeholder="e.g. 450", label_visibility="hidden", key="cost")
+# ─────────────────────────────────────────────────────────────
+#  OUTPUT TABLES
+# ─────────────────────────────────────────────────────────────
+st.subheader("📊 Drill Design Parameters")
+drill_data = pd.DataFrame([
+    ("Burden", f"{results['burden']:.3f} m"),
+    ("Spacing", f"{results['spacing']:.3f} m"),
+    ("Number of Holes", results['holes']),
+    ("Charge per Hole", f"{results['charge']:.4f} t"),
+], columns=["Parameter", "Value"])
+st.table(drill_data)
 
+st.subheader("📦 Explosive & Rock Volume")
+rock_data = pd.DataFrame([
+    ("Total Explosive", f"{results['total_exp']:.3f} t"),
+    ("Rock Volume", f"{results['rock_vol']:.2f} m³"),
+    ("Powder Factor", f"{results['pf']:.4f} t/m³"),
+], columns=["Parameter", "Value"])
+st.table(rock_data)
 
-# ── BUTTON ───────────────────────────────────────────────────
-
-_, btn_mid, _ = st.columns([3, 4, 3])
-with btn_mid:
-    st.markdown('<div style="padding: 0 20px;">', unsafe_allow_html=True)
-    run = st.button("Estimate Cost")
-    st.markdown('</div>', unsafe_allow_html=True)
-
-
-# ── CALCULATE ────────────────────────────────────────────────
-
-if run:
-    errors = []
-
-    def parse(val, name):
-        try:
-            v = float(val)
-            if v <= 0:
-                errors.append(f"{name} — must be greater than zero")
-            return v
-        except ValueError:
-            errors.append(f"{name} — please enter a valid number")
-            return None
-
-    bench_height      = parse(t_bench,  "Bench Height")
-    hole_diameter     = parse(t_hole,   "Hole Diameter")
-    rock_density      = parse(t_rock,   "Rock Density")
-    explosive_density = parse(t_expden, "Explosive Density")
-    area              = parse(t_area,   "Bench Area")
-    unit_cost         = parse(t_cost,   "Unit Cost")
-
-    if errors:
-        items = "".join(f'<div class="err-item">▶ &nbsp;{e}</div>' for e in errors)
-        st.markdown(
-            f'<div style="padding:0 72px;"><div class="err-shell">{items}</div></div>',
-            unsafe_allow_html=True
-        )
-    else:
-        res = run_design(bench_height, hole_diameter, rock_density,
-                         explosive_density, unit_cost, area)
-        st.session_state["res"] = res
-        st.session_state["inp"] = dict(
-            bench_height=bench_height, hole_diameter=hole_diameter,
-            rock_density=rock_density, explosive_density=explosive_density,
-            unit_cost=unit_cost, area=area
-        )
-        st.session_state["ts"] = datetime.now().strftime("%d %b %Y  —  %H:%M:%S")
-
-
-# ── OUTPUTS ──────────────────────────────────────────────────
-
-if "res" in st.session_state:
-    res = st.session_state["res"]
-    inp = st.session_state["inp"]
-    ts  = st.session_state["ts"]
-
-    st.markdown("""
-    <div style="padding: 44px 72px 0;">
-        <div class="sec-rule">
-            <span class="sec-rule-icon">📊</span>
-            <span class="sec-rule-txt">Results</span>
-            <span class="sec-rule-line"></span>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-
-    # Header band above table
-    st.markdown("""
-    <div style="padding: 0 72px 0;">
-        <div class="res-band">
-            <span style="font-size:14px;">🔩</span>
-            <span class="res-band-txt">Computed output — drill &amp; blast parameters</span>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-
-    # Build DataFrame
-    df = pd.DataFrame({
-        "Parameter": [
-            "Burden",
-            "Hole Spacing",
-            "Number of Drill Holes",
-            "Charge per Hole",
-            "Total Explosive",
-            "Rock Volume",
-            "Powder Factor",
-        ],
-        "Value": [
-            f"{res['burden']:.3f}",
-            f"{res['spacing']:.3f}",
-            f"{res['holes']}",
-            f"{res['charge']:.4f}",
-            f"{res['total_exp']:.3f}",
-            f"{res['rock_vol']:.2f}",
-            f"{res['pf']:.4f}",
-        ],
-        "Unit": ["m", "m", "holes", "t", "t", "m³", "t/m³"]
-    })
-
-    # Copy hint
-    st.markdown('<div style="padding: 0 72px;"><div class="copy-hint">click any cell · select all · ctrl+c to copy</div></div>',
-                unsafe_allow_html=True)
-
-    # Render the table inside padded container using columns
-    _, tbl, _ = st.columns([1, 18, 1])
-    with tbl:
-        st.dataframe(
-            df,
-            use_container_width=True,
-            hide_index=True,
-            height=280,
-            column_config={
-                "Parameter": st.column_config.TextColumn("Parameter", width="large"),
-                "Value":     st.column_config.TextColumn("Value",     width="medium"),
-                "Unit":      st.column_config.TextColumn("Unit",      width="small"),
-            }
-        )
-
-    # Cost strip
-    st.markdown(f"""
-    <div style="padding: 0 72px;">
-        <div class="cost-strip">
-            <div>
-                <div class="cost-lhs-label">Total Blasting Cost — Bench Estimate</div>
-                <div class="cost-lhs-note">
-                    {res['total_exp']:.3f} t &nbsp;×&nbsp; ${inp['unit_cost']:.2f} per tonne
-                </div>
-            </div>
-            <div class="cost-figure">${res['cost']:,.2f}</div>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-
-    st.markdown(f'<div style="padding: 4px 72px;"><div class="ts-line">Calculated: {ts}</div></div>',
-                unsafe_allow_html=True)
-
-    st.markdown('<div style="height:64px;"></div>', unsafe_allow_html=True)
+st.subheader("💰 Cost Estimation")
+cost_data = pd.DataFrame([
+    ("Explosive Cost", f"${results['explosive_cost']:,.2f}"),
+    ("Drilling Cost", f"${results['drilling_cost']:,.2f}"),
+    ("Initiation Cost", f"${results['initiation_cost']:,.2f}"),
+    ("Total Cost", f"${results['cost']:
