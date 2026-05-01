@@ -13,7 +13,7 @@ st.set_page_config(
 )
 
 # =====================================================
-# THEME SETTINGS (SESSION STATE)
+# THEME SYSTEM
 # =====================================================
 if "theme" not in st.session_state:
     st.session_state.theme = "Dark"
@@ -22,45 +22,33 @@ def apply_theme(theme):
     if theme == "Dark":
         st.markdown("""
         <style>
-        .stApp {background: #0f172a; color: white;}
-        section[data-testid="stSidebar"] {background: #111827;}
-        h1,h2,h3 {color: #facc15;}
-        label {color: white !important;}
+        .stApp {background:#0b1320; color:white;}
+        section[data-testid="stSidebar"] {background:#111827;}
+        h1,h2,h3 {color:#facc15;}
+        label {color:white !important;}
         </style>
         """, unsafe_allow_html=True)
 
     elif theme == "Light":
         st.markdown("""
         <style>
-        .stApp {background: #f8fafc; color: black;}
-        section[data-testid="stSidebar"] {background: #e2e8f0;}
-        h1,h2,h3 {color: #1e3a8a;}
-        label {color: black !important;}
+        .stApp {background:#f8fafc; color:black;}
+        section[data-testid="stSidebar"] {background:#e2e8f0;}
+        h1,h2,h3 {color:#1e3a8a;}
+        label {color:black !important;}
         </style>
         """, unsafe_allow_html=True)
 
 apply_theme(st.session_state.theme)
 
 # =====================================================
-# HEADER
+# TITLE
 # =====================================================
-st.title("Blast Design & Cost Tool")
+st.title("💥 Blast Design & Cost Tool")
 st.caption("Version 1.0 | Open Pit Drill & Blast Engineering")
 
 # =====================================================
-# INFO SECTION
-# =====================================================
-with st.expander("How to use this app"):
-    st.write("""
-    1. Enter all required design parameters in the left panel.  
-    2. Select units for each input where applicable.  
-    3. Click CALCULATE to generate blast design.  
-    4. View results in a single consolidated table.  
-    5. Download results for reporting.
-    """)
-
-# =====================================================
-# SETTINGS
+# SETTINGS (ALL OPTIONS HERE ONLY)
 # =====================================================
 with st.sidebar:
     st.header("Settings")
@@ -71,33 +59,49 @@ with st.sidebar:
         index=["Dark","Light"].index(st.session_state.theme)
     )
 
-    st.markdown("---")
-    st.write("App Version: 1.0")
+    with st.expander("How to use"):
+        st.write("""
+        1. Enter blast parameters in main panel  
+        2. Select units next to each input  
+        3. Click Calculate  
+        4. View full results in table  
+        5. Download report if needed  
+        """)
+
+    with st.expander("App Info"):
+        st.write("Blast Design Tool v1.0")
+        st.write("Built for Mining Engineering Design Support")
 
 # =====================================================
 # UNIT CONVERSIONS
 # =====================================================
 def length(v,u):
     if v < 0: return None
-    if u=="mm": return v/1000
-    if u=="cm": return v/100
-    if u=="m": return v
-    if u=="ft": return v*0.3048
+    return {
+        "mm": v/1000,
+        "cm": v/100,
+        "m": v,
+        "ft": v*0.3048
+    }[u]
 
 def diameter(v,u):
     if v < 0: return None
-    if u=="mm": return v/1000
-    if u=="cm": return v/100
-    if u=="m": return v
-    if u=="in": return v*0.0254
+    return {
+        "mm": v/1000,
+        "cm": v/100,
+        "m": v,
+        "in": v*0.0254
+    }[u]
 
 def density(v,u):
     if v < 0: return None
-    if u=="t/m³": return v
-    if u=="kg/m³": return v/1000
+    return {
+        "t/m³": v,
+        "kg/m³": v/1000
+    }[u]
 
 # =====================================================
-# CALCULATIONS
+# CORE FORMULAS
 # =====================================================
 def burden(d,r): return 25*d/r if r>0 else 0
 def spacing(b): return 1.25*b
@@ -109,40 +113,42 @@ def charge(d,h,r):
     return math.pi*(d/2)**2*h*r
 
 # =====================================================
-# INPUTS
+# INPUTS (CLEAN INLINE UNITS)
 # =====================================================
-with st.sidebar:
+st.subheader("Design Inputs")
 
-    st.header("Inputs")
+col1, col2 = st.columns(2)
 
+with col1:
     bench = st.number_input("Bench Height", min_value=0.0, value=10.0)
-    bu = st.selectbox("Bench Unit", ["mm","cm","m","ft"])
+    bu = st.selectbox("Unit", ["mm","cm","m","ft"], key="bu")
 
     dia = st.number_input("Hole Diameter", min_value=0.0, value=115.0)
-    du = st.selectbox("Diameter Unit", ["mm","cm","m","in"])
+    du = st.selectbox("Unit", ["mm","cm","m","in"], key="du")
+
+    stemming = st.number_input("Stemming", min_value=0.0, value=2.0)
+    su = st.selectbox("Unit", ["mm","cm","m","ft"], key="su")
+
+with col2:
+    sub = st.number_input("Subdrill", min_value=0.0, value=1.0)
+    subu = st.selectbox("Unit", ["mm","cm","m","ft"], key="subu")
 
     area = st.number_input("Bench Area (m²)", min_value=0.0, value=5000.0)
 
     rock = st.number_input("Rock Density", min_value=0.0, value=2.7)
-    ru = st.selectbox("Rock Unit", ["t/m³","kg/m³"])
+    ru = st.selectbox("Unit", ["t/m³","kg/m³"], key="ru")
 
     exp = st.number_input("Explosive Density", min_value=0.0, value=0.85)
-    eu = st.selectbox("Explosive Unit", ["t/m³","kg/m³"])
+    eu = st.selectbox("Unit", ["t/m³","kg/m³"], key="eu")
 
-    stemming = st.number_input("Stemming", min_value=0.0, value=2.0)
-    su = st.selectbox("Stemming Unit", ["mm","cm","m","ft"])
+expl_cost = st.number_input("Explosive Cost ($/t)", min_value=0.0, value=450.0)
+drill_cost = st.number_input("Drilling Cost ($/m)", min_value=0.0, value=50.0)
+det_cost = st.number_input("Detonator Cost ($/hole)", min_value=0.0, value=10.0)
 
-    sub = st.number_input("Subdrill", min_value=0.0, value=1.0)
-    subu = st.selectbox("Subdrill Unit", ["mm","cm","m","ft"])
-
-    expl_cost = st.number_input("Explosive Cost ($/t)", min_value=0.0, value=450.0)
-    drill_cost = st.number_input("Drilling Cost ($/m)", min_value=0.0, value=50.0)
-    det_cost = st.number_input("Detonator Cost ($/hole)", min_value=0.0, value=10.0)
-
-    run = st.button("Calculate")
+run = st.button("CALCULATE")
 
 # =====================================================
-# MAIN
+# CALCULATION
 # =====================================================
 if run:
 
@@ -162,7 +168,7 @@ if run:
     s = spacing(b)
     h = holes(area,b,s)
 
-    eff_h = max(0,bench_m + sub_m - stem_m)
+    eff_h = max(0,bench_m+sub_m-stem_m)
     ch = charge(dia_m,eff_h,exp_d)
 
     total_exp = ch*h
@@ -175,7 +181,9 @@ if run:
 
     total_cost = exp_cost + drill_total + det_total
 
-    # SINGLE TABLE OUTPUT
+    # =================================================
+    # RESULTS (ONE CLEAN TABLE)
+    # =================================================
     df = pd.DataFrame([
         ["Burden", f"{b:.2f} m"],
         ["Spacing", f"{s:.2f} m"],
@@ -190,7 +198,7 @@ if run:
         ["TOTAL COST", f"${total_cost:,.2f}"]
     ], columns=["Parameter","Value"])
 
-    st.subheader("Results")
+    st.subheader("Results Summary")
     st.dataframe(df, use_container_width=True)
 
     csv = df.to_csv(index=False).encode("utf-8")
@@ -205,4 +213,4 @@ if run:
 # =====================================================
 # FOOTER
 # =====================================================
-st.caption("Version 1.0 | Blast Design Engineering Tool")
+st.caption("Blast Design Tool v1.0 | Mining Engineering Software")
