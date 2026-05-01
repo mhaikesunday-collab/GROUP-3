@@ -13,11 +13,13 @@ st.set_page_config(
 )
 
 # =====================================================
+# SAFE SESSION STATE
+# =====================================================
+st.session_state.setdefault("theme", "DARK")
+
+# =====================================================
 # THEME SYSTEM
 # =====================================================
-if "theme" not in st.session_state:
-    st.session_state.theme = "DARK"
-
 def apply_theme(theme):
     if theme == "DARK":
         st.markdown("""
@@ -39,8 +41,6 @@ def apply_theme(theme):
         </style>
         """, unsafe_allow_html=True)
 
-apply_theme(st.session_state.theme)
-
 # =====================================================
 # HEADER
 # =====================================================
@@ -48,21 +48,29 @@ st.title("💥 BLAST DESIGN TOOL")
 st.caption("VERSION 1.0 | OPEN PIT MINING ENGINEERING")
 
 # =====================================================
-# SETTINGS (TOGGLE PANEL)
+# SETTINGS (PROPER CONTROL PANEL)
 # =====================================================
-with st.sidebar.expander("⚙️ SETTINGS"):
+with st.sidebar.expander("⚙️ SETTINGS", expanded=False):
 
-    st.session_state.theme = st.selectbox(
+    theme_options = ["DARK", "LIGHT"]
+
+    selected_theme = st.selectbox(
         "THEME",
-        ["DARK", "LIGHT"],
-        index=["DARK","LIGHT"].index(st.session_state.theme)
+        theme_options,
+        index=theme_options.index(st.session_state.theme)
     )
 
+    st.session_state.theme = selected_theme
+
+    st.write("---")
     st.write("VERSION: 1.0")
-    st.write("USE: ENTER INPUTS → CLICK CALCULATE → VIEW RESULTS")
+    st.write("USE: ENTER INPUTS → CALCULATE → VIEW RESULTS")
+
+# APPLY THEME AFTER SELECTION
+apply_theme(st.session_state.theme)
 
 # =====================================================
-# UNIT CONVERSIONS
+# UNIT FUNCTIONS
 # =====================================================
 def length(v,u):
     if v < 0: return None
@@ -90,7 +98,7 @@ def density(v,u):
     }[u]
 
 # =====================================================
-# FORMULAS
+# BLAST FORMULAS
 # =====================================================
 def burden(d,r): return 25*d/r if r>0 else 0
 def spacing(b): return 1.25*b
@@ -110,25 +118,25 @@ c1, c2 = st.columns(2)
 
 with c1:
     bench = st.number_input("BENCH HEIGHT", min_value=0.0, value=10.0)
-    bu = st.selectbox("UNIT", ["MM","CM","M","FT"], key="bu")
+    bu = st.selectbox("UNIT", ["MM","CM","M","FT"])
 
     dia = st.number_input("HOLE DIAMETER", min_value=0.0, value=115.0)
-    du = st.selectbox("UNIT", ["MM","CM","M","IN"], key="du")
+    du = st.selectbox("UNIT", ["MM","CM","M","IN"])
 
     stemming = st.number_input("STEMMING", min_value=0.0, value=2.0)
-    su = st.selectbox("UNIT", ["MM","CM","M","FT"], key="su")
+    su = st.selectbox("UNIT", ["MM","CM","M","FT"])
 
 with c2:
     sub = st.number_input("SUBDRILL", min_value=0.0, value=1.0)
-    subu = st.selectbox("UNIT", ["MM","CM","M","FT"], key="subu")
+    subu = st.selectbox("UNIT", ["MM","CM","M","FT"])
 
     area = st.number_input("BENCH AREA (M²)", min_value=0.0, value=5000.0)
 
     rock = st.number_input("ROCK DENSITY", min_value=0.0, value=2.7)
-    ru = st.selectbox("UNIT", ["T/M³","KG/M³"], key="ru")
+    ru = st.selectbox("UNIT", ["T/M³","KG/M³"])
 
     exp = st.number_input("EXPLOSIVE DENSITY", min_value=0.0, value=0.85)
-    eu = st.selectbox("UNIT", ["T/M³","KG/M³"], key="eu")
+    eu = st.selectbox("UNIT", ["T/M³","KG/M³"])
 
 expl_cost = st.number_input("EXPLOSIVE COST ($/T)", min_value=0.0, value=450.0)
 drill_cost = st.number_input("DRILLING COST ($/M)", min_value=0.0, value=50.0)
@@ -171,10 +179,8 @@ if run:
     total_cost = exp_cost + drill_total + det_total
 
     # =================================================
-    # RESULTS
+    # RESULTS (ONE TABLE ONLY)
     # =================================================
-    st.subheader("📊 RESULTS")
-
     df = pd.DataFrame([
         ["BURDEN", f"{b:.2f} M"],
         ["SPACING", f"{s:.2f} M"],
@@ -189,18 +195,17 @@ if run:
         ["TOTAL COST", f"${total_cost:,.2f}"]
     ], columns=["PARAMETER","VALUE"])
 
+    st.subheader("📊 RESULTS")
     st.dataframe(df, use_container_width=True)
 
-    # =================================================
-    # DOWNLOAD BUTTON (UNIQUE COLOR STYLE)
-    # =================================================
+    # DOWNLOAD BUTTON STYLE
     st.markdown("""
     <style>
     .stDownloadButton button {
-        background-color: #ff6d00;
-        color: white;
-        font-weight: bold;
-        border-radius: 10px;
+        background:#ff8c00;
+        color:white;
+        font-weight:bold;
+        border-radius:10px;
     }
     </style>
     """, unsafe_allow_html=True)
