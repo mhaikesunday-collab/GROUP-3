@@ -14,9 +14,9 @@ st.set_page_config(
 )
 
 # ─────────────────────────────────────────────────────────────
-#  GLOBAL CSS (unchanged)
+#  GLOBAL CSS (shortened for clarity, keep your full CSS here)
 # ─────────────────────────────────────────────────────────────
-st.markdown("""<style> ... </style>""", unsafe_allow_html=True)
+st.markdown("""<style>/* your CSS here */</style>""", unsafe_allow_html=True)
 
 # ─────────────────────────────────────────────────────────────
 #  BACKEND FUNCTIONS
@@ -30,8 +30,7 @@ def calc_spacing(burden: float) -> float:
 def calc_holes(area: float, burden: float, spacing: float) -> int:
     return max(1, int(area / (burden * spacing)))
 
-def calc_charge_per_hole(diameter: float, bench_height: float,
-                          explosive_density: float) -> float:
+def calc_charge_per_hole(diameter: float, bench_height: float, explosive_density: float) -> float:
     radius = diameter / 2
     volume = math.pi * (radius ** 2) * bench_height
     return volume * explosive_density
@@ -46,8 +45,7 @@ def calc_total_cost(total_explosive: float, unit_cost: float) -> float:
 def calc_effective_height(bench_height: float, stemming: float, subdrill: float) -> float:
     return max(0.0, bench_height + subdrill - stemming)
 
-def calc_charge_per_hole_extended(diameter: float, effective_height: float,
-                                  explosive_density: float) -> float:
+def calc_charge_per_hole_extended(diameter: float, effective_height: float, explosive_density: float) -> float:
     radius = diameter / 2
     volume = math.pi * (radius ** 2) * effective_height
     return volume * explosive_density
@@ -149,26 +147,24 @@ inputs  = st.session_state["inputs"]
 #  OUTPUT TABLES
 # ─────────────────────────────────────────────────────────────
 st.subheader("📊 Drill Design Parameters")
-drill_data = pd.DataFrame([
+st.table(pd.DataFrame([
     ("Burden", f"{results['burden']:.3f} m"),
     ("Spacing", f"{results['spacing']:.3f} m"),
     ("Number of Holes", results['holes']),
     ("Charge per Hole", f"{results['charge']:.4f} t"),
-], columns=["Parameter", "Value"])
-st.table(drill_data)
+], columns=["Parameter", "Value"]))
 
 st.subheader("📦 Explosive & Rock Volume")
-rock_data = pd.DataFrame([
+st.table(pd.DataFrame([
     ("Total Explosive", f"{results['total_exp']:.3f} t"),
     ("Rock Volume", f"{results['rock_vol']:.2f} m³"),
     ("Powder Factor", f"{results['pf']:.4f} t/m³"),
-], columns=["Parameter", "Value"])
-st.table(rock_data)
+], columns=["Parameter", "Value"]))
 
 st.subheader("💰 Cost Estimation")
-cost_data = pd.DataFrame([
+st.table(pd.DataFrame([
     ("Explosive Cost", f"${results['explosive_cost']:,.2f}"),
     ("Drilling Cost", f"${results['drilling_cost']:,.2f}"),
     ("Initiation Cost", f"${results['initiation_cost']:,.2f}"),
     ("Total Cost", f"${results['cost']:,.2f}"),
-], columns=["
+], columns=["Component", "Value"]
