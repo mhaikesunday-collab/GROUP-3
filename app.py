@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 import math
-from datetime import datetime
 
 # =====================================================
 # PAGE CONFIG
@@ -13,15 +12,15 @@ st.set_page_config(
 )
 
 # =====================================================
-# SAFE SESSION STATE
+# SAFE STATE
 # =====================================================
 st.session_state.setdefault("theme", "DARK")
 
 # =====================================================
-# THEME SYSTEM
+# THEME
 # =====================================================
-def apply_theme(theme):
-    if theme == "DARK":
+def theme_css(mode):
+    if mode == "DARK":
         st.markdown("""
         <style>
         .stApp {background:#0b1320; color:white;}
@@ -31,7 +30,7 @@ def apply_theme(theme):
         </style>
         """, unsafe_allow_html=True)
 
-    elif theme == "LIGHT":
+    else:
         st.markdown("""
         <style>
         .stApp {background:#f1f5f9; color:black;}
@@ -42,63 +41,43 @@ def apply_theme(theme):
         """, unsafe_allow_html=True)
 
 # =====================================================
-# HEADER
-# =====================================================
-st.title("💥 BLAST DESIGN TOOL")
-st.caption("VERSION 1.0 | OPEN PIT MINING ENGINEERING")
-
-# =====================================================
-# SETTINGS (PROPER CONTROL PANEL)
+# SETTINGS PANEL
 # =====================================================
 with st.sidebar.expander("⚙️ SETTINGS", expanded=False):
 
-    theme_options = ["DARK", "LIGHT"]
-
-    selected_theme = st.selectbox(
+    st.session_state.theme = st.selectbox(
         "THEME",
-        theme_options,
-        index=theme_options.index(st.session_state.theme)
+        ["DARK", "LIGHT"],
+        index=["DARK","LIGHT"].index(st.session_state.theme)
     )
 
-    st.session_state.theme = selected_theme
+    st.write("VERSION 1.0")
+    st.write("BLAST DESIGN ENGINEERING TOOL")
 
-    st.write("---")
-    st.write("VERSION: 1.0")
-    st.write("USE: ENTER INPUTS → CALCULATE → VIEW RESULTS")
-
-# APPLY THEME AFTER SELECTION
-apply_theme(st.session_state.theme)
+theme_css(st.session_state.theme)
 
 # =====================================================
-# UNIT FUNCTIONS
+# TITLE
+# =====================================================
+st.title("💥 BLAST DESIGN TOOL")
+
+# =====================================================
+# CONVERSIONS
 # =====================================================
 def length(v,u):
     if v < 0: return None
-    return {
-        "MM": v/1000,
-        "CM": v/100,
-        "M": v,
-        "FT": v*0.3048
-    }[u]
+    return {"MM":v/1000,"CM":v/100,"M":v,"FT":v*0.3048}[u]
 
 def diameter(v,u):
     if v < 0: return None
-    return {
-        "MM": v/1000,
-        "CM": v/100,
-        "M": v,
-        "IN": v*0.0254
-    }[u]
+    return {"MM":v/1000,"CM":v/100,"M":v,"IN":v*0.0254}[u]
 
 def density(v,u):
     if v < 0: return None
-    return {
-        "T/M³": v,
-        "KG/M³": v/1000
-    }[u]
+    return {"T/M³":v,"KG/M³":v/1000}[u]
 
 # =====================================================
-# BLAST FORMULAS
+# FORMULAS
 # =====================================================
 def burden(d,r): return 25*d/r if r>0 else 0
 def spacing(b): return 1.25*b
@@ -110,33 +89,27 @@ def charge(d,h,r):
     return math.pi*(d/2)**2*h*r
 
 # =====================================================
-# INPUTS
+# INPUT SECTION (INLINE UNITS)
 # =====================================================
 st.subheader("🧱 INPUTS")
 
-c1, c2 = st.columns(2)
+def input_with_unit(label, value, units, key):
+    col1, col2 = st.columns([4,1])
+    with col1:
+        val = st.number_input(label, min_value=0.0, value=value, key=key+"_val")
+    with col2:
+        unit = st.selectbox(" ", units, key=key+"_unit")
+    return val, unit
 
-with c1:
-    bench = st.number_input("BENCH HEIGHT", min_value=0.0, value=10.0)
-    bu = st.selectbox("UNIT", ["MM","CM","M","FT"])
+bench, bu = input_with_unit("BENCH HEIGHT", 10.0, ["MM","CM","M","FT"], "bench")
+dia, du = input_with_unit("HOLE DIAMETER", 115.0, ["MM","CM","M","IN"], "dia")
+stemming, su = input_with_unit("STEMMING", 2.0, ["MM","CM","M","FT"], "stem")
+sub, subu = input_with_unit("SUBDRILL", 1.0, ["MM","CM","M","FT"], "sub")
 
-    dia = st.number_input("HOLE DIAMETER", min_value=0.0, value=115.0)
-    du = st.selectbox("UNIT", ["MM","CM","M","IN"])
+area = st.number_input("BENCH AREA (M²)", min_value=0.0, value=5000.0)
 
-    stemming = st.number_input("STEMMING", min_value=0.0, value=2.0)
-    su = st.selectbox("UNIT", ["MM","CM","M","FT"])
-
-with c2:
-    sub = st.number_input("SUBDRILL", min_value=0.0, value=1.0)
-    subu = st.selectbox("UNIT", ["MM","CM","M","FT"])
-
-    area = st.number_input("BENCH AREA (M²)", min_value=0.0, value=5000.0)
-
-    rock = st.number_input("ROCK DENSITY", min_value=0.0, value=2.7)
-    ru = st.selectbox("UNIT", ["T/M³","KG/M³"])
-
-    exp = st.number_input("EXPLOSIVE DENSITY", min_value=0.0, value=0.85)
-    eu = st.selectbox("UNIT", ["T/M³","KG/M³"])
+rock, ru = input_with_unit("ROCK DENSITY", 2.7, ["T/M³","KG/M³"], "rock")
+exp, eu = input_with_unit("EXPLOSIVE DENSITY", 0.85, ["T/M³","KG/M³"], "exp")
 
 expl_cost = st.number_input("EXPLOSIVE COST ($/T)", min_value=0.0, value=450.0)
 drill_cost = st.number_input("DRILLING COST ($/M)", min_value=0.0, value=50.0)
@@ -179,7 +152,7 @@ if run:
     total_cost = exp_cost + drill_total + det_total
 
     # =================================================
-    # RESULTS (ONE TABLE ONLY)
+    # RESULTS TABLE
     # =================================================
     df = pd.DataFrame([
         ["BURDEN", f"{b:.2f} M"],
@@ -197,18 +170,6 @@ if run:
 
     st.subheader("📊 RESULTS")
     st.dataframe(df, use_container_width=True)
-
-    # DOWNLOAD BUTTON STYLE
-    st.markdown("""
-    <style>
-    .stDownloadButton button {
-        background:#ff8c00;
-        color:white;
-        font-weight:bold;
-        border-radius:10px;
-    }
-    </style>
-    """, unsafe_allow_html=True)
 
     csv = df.to_csv(index=False).encode("utf-8")
 
